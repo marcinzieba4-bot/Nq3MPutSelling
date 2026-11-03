@@ -1,0 +1,5 @@
+__pycache__/
+*.pyc
+.venv/
+# raw downloads are re-fetched by `python run_backtest.py --refresh`
+data/raw/

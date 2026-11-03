@@ -1,0 +1,3 @@
+prev_loss,rolls,avg_premium_pct,avg_atm_iv_pct,next_q_naked_pnl_pct,next_q_win_rate_pct
+after a winning quarter,131,4.472,22.595,1.268,78.626
+after a losing quarter,31,6.216,31.543,2.425,87.097

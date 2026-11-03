@@ -1,0 +1,267 @@
+start_year,strategy,ann_return_pct,max_dd_pct_capital,worst_quarter_pct,max_mult,ruined,final_equity
+1987,Naked ATM put | No hedge | Fixed 1x,6.287,85.039,-26.213,1.0,,3483308.849
+1987,Naked ATM put | No hedge | Recover until whole,13.759,211.501,-95.336,10.915,,6434683.604
+1987,Put spread ATM/-10% | No hedge | Fixed 1x,3.183,36.354,-7.889,1.0,,2257308.985
+1987,Put spread ATM/-10% | No hedge | Recover until whole,7.528,155.225,-63.543,19.763,,3973444.702
+1987,Put spread ATM/-20% | No hedge | Recover until whole,-8.097,286.338,-201.209,15.979,2002-06-03,-231238.007
+1987,Naked ATM put | No hedge | Recover once,7.861,142.504,-88.323,4.268,,4104880.195
+1987,Naked ATM put | No hedge | Recover + 200d trend filter,9.43,38.812,-21.698,6.735,,4724607.636
+1988,Naked ATM put | No hedge | Fixed 1x,6.6,85.039,-26.213,1.0,,3541007.954
+1988,Naked ATM put | No hedge | Recover until whole,13.734,211.501,-95.336,10.915,,6287730.026
+1988,Put spread ATM/-10% | No hedge | Fixed 1x,3.255,36.354,-7.889,1.0,,2253373.726
+1988,Put spread ATM/-10% | No hedge | Recover until whole,-6.893,201.815,-122.999,19.424,2002-09-20,0.0
+1988,Put spread ATM/-20% | No hedge | Recover until whole,-7.736,260.731,-127.35,11.388,2002-05-06,-93300.99
+1988,Naked ATM put | No hedge | Recover once,7.682,142.504,-88.323,4.268,,3957926.616
+1988,Naked ATM put | No hedge | Recover + 200d trend filter,9.461,32.097,-21.698,6.735,,4642545.404
+1989,Naked ATM put | No hedge | Fixed 1x,6.557,85.039,-26.213,1.0,,3459247.962
+1989,Naked ATM put | No hedge | Recover until whole,13.87,211.501,-95.336,10.915,,6201977.143
+1989,Put spread ATM/-10% | No hedge | Fixed 1x,3.301,36.354,-7.889,1.0,,2237896.034
+1989,Put spread ATM/-10% | No hedge | Recover until whole,-7.401,196.781,-104.826,16.358,2002-09-20,0.0
+1989,Put spread ATM/-20% | No hedge | Recover until whole,-8.077,250.292,-137.55,10.624,2002-05-06,-60964.953
+1989,Naked ATM put | No hedge | Recover once,7.663,142.504,-88.323,4.268,,3874034.064
+1989,Naked ATM put | No hedge | Recover + 200d trend filter,9.579,32.097,-21.698,6.735,,4592723.614
+1990,Naked ATM put | No hedge | Fixed 1x,6.518,85.039,-26.213,1.0,,3379721.352
+1990,Naked ATM put | No hedge | Recover until whole,13.969,211.501,-95.336,10.915,,6099879.099
+1990,Put spread ATM/-10% | No hedge | Fixed 1x,3.29,36.354,-7.889,1.0,,2201114.254
+1990,Put spread ATM/-10% | No hedge | Recover until whole,-8.153,190.014,-102.367,16.367,2002-06-21,-0.0
+1990,Put spread ATM/-20% | No hedge | Recover until whole,-8.404,237.145,-150.398,11.196,2002-05-06,-20237.425
+1990,Naked ATM put | No hedge | Recover once,7.592,142.504,-88.323,4.268,,3771936.021
+1990,Naked ATM put | No hedge | Recover + 200d trend filter,9.561,32.097,-21.698,6.735,,4490625.571
+1991,Naked ATM put | No hedge | Fixed 1x,6.878,85.039,-26.213,1.0,,3442574.9
+1991,Naked ATM put | No hedge | Recover until whole,13.927,211.501,-95.336,10.915,,5945752.657
+1991,Put spread ATM/-10% | No hedge | Fixed 1x,3.367,36.354,-7.889,1.0,,2195734.783
+1991,Put spread ATM/-10% | No hedge | Recover until whole,-8.874,181.825,-77.311,15.125,2002-06-21,-0.0
+1991,Put spread ATM/-20% | No hedge | Recover until whole,-11.638,245.192,-166.006,12.487,2001-09-17,-223195.013
+1991,Naked ATM put | No hedge | Recover once,7.371,142.504,-88.323,4.268,,3617809.579
+1991,Naked ATM put | No hedge | Recover + 200d trend filter,9.725,32.097,-16.79,6.735,,4453535.998
+1992,Naked ATM put | No hedge | Fixed 1x,6.58,85.039,-26.213,1.0,,3269985.129
+1992,Naked ATM put | No hedge | Recover until whole,13.836,211.501,-95.336,10.915,,5773162.887
+1992,Put spread ATM/-10% | No hedge | Fixed 1x,3.167,36.354,-7.889,1.0,,2092427.34
+1992,Put spread ATM/-10% | No hedge | Recover until whole,-9.753,171.494,-88.245,14.168,2002-06-21,-0.0
+1992,Put spread ATM/-20% | No hedge | Recover until whole,-10.95,211.822,-122.47,11.883,2001-09-06,-36379.277
+1992,Naked ATM put | No hedge | Recover once,7.088,142.504,-88.323,4.268,,3445219.809
+1992,Naked ATM put | No hedge | Recover + 200d trend filter,9.511,32.097,-16.79,6.735,,4280946.228
+1993,Naked ATM put | No hedge | Fixed 1x,6.741,85.039,-26.213,1.0,,3258289.395
+1993,Naked ATM put | No hedge | Recover until whole,13.612,204.347,-95.336,9.975,,5560208.82
+1993,Put spread ATM/-10% | No hedge | Fixed 1x,3.321,36.354,-7.889,1.0,,2112594.067
+1993,Put spread ATM/-10% | No hedge | Recover until whole,-10.803,166.281,-93.763,15.053,2002-06-21,-0.0
+1993,Put spread ATM/-20% | No hedge | Recover until whole,-12.189,203.259,-108.272,10.506,2001-09-06,-32161.752
+1993,Naked ATM put | No hedge | Recover once,7.008,142.504,-88.323,4.268,,3347604.833
+1993,Naked ATM put | No hedge | Recover + 200d trend filter,9.64,32.097,-16.79,6.735,,4229391.129
+1994,Naked ATM put | No hedge | Fixed 1x,6.483,85.039,-26.213,1.0,,3107184.099
+1994,Naked ATM put | No hedge | Recover until whole,13.542,192.844,-95.336,8.464,,5401723.214
+1994,Put spread ATM/-10% | No hedge | Fixed 1x,3.122,36.354,-7.889,1.0,,2014807.168
+1994,Put spread ATM/-10% | No hedge | Recover until whole,-13.311,156.502,-95.46,15.326,2001-09-21,-0.0
+1994,Put spread ATM/-20% | No hedge | Recover until whole,-13.722,189.229,-96.479,8.249,2001-09-06,-25252.039
+1994,Naked ATM put | No hedge | Recover once,6.758,142.504,-88.323,4.268,,3196499.537
+1994,Naked ATM put | No hedge | Recover + 200d trend filter,9.471,32.097,-16.79,6.735,,4078285.833
+1995,Naked ATM put | No hedge | Fixed 1x,6.76,85.039,-26.213,1.0,,3129867.89
+1995,Naked ATM put | No hedge | Recover until whole,13.632,187.657,-95.336,9.455,,5294980.775
+1995,Put spread ATM/-10% | No hedge | Fixed 1x,3.377,36.354,-7.889,1.0,,2063935.842
+1995,Put spread ATM/-10% | No hedge | Recover until whole,-15.347,151.889,-87.892,14.111,2001-09-21,-0.0
+1995,Put spread ATM/-20% | No hedge | Recover until whole,-15.785,182.787,-96.479,7.212,2001-09-06,-22079.282
+1995,Naked ATM put | No hedge | Recover once,6.755,142.504,-88.323,4.268,,3128363.613
+1995,Naked ATM put | No hedge | Recover + 200d trend filter,9.673,32.097,-16.79,6.735,,4047788.798
+1996,Naked ATM put | No hedge | Fixed 1x,6.609,85.039,-26.213,1.0,,3016417.272
+1996,Naked ATM put | No hedge | Recover until whole,-18.545,208.573,-129.939,10.162,2002-05-03,-137355.11
+1996,Put spread ATM/-10% | No hedge | Fixed 1x,3.333,36.354,-7.889,1.0,,2016888.281
+1996,Put spread ATM/-10% | No hedge | Recover until whole,-15.347,144.634,-75.987,12.2,2002-09-20,0.0
+1996,Put spread ATM/-20% | No hedge | Recover until whole,-18.563,172.347,-96.479,7.023,2001-09-06,-16937.837
+1996,Naked ATM put | No hedge | Recover once,6.602,142.504,-88.323,4.268,,3014333.067
+1996,Naked ATM put | No hedge | Recover + 200d trend filter,9.616,32.097,-16.79,6.735,,3933758.252
+1997,Naked ATM put | No hedge | Fixed 1x,6.311,85.039,-26.213,1.0,,2861478.012
+1997,Naked ATM put | No hedge | Recover until whole,-23.344,184.349,-118.445,6.392,2001-09-19,-50061.044
+1997,Put spread ATM/-10% | No hedge | Fixed 1x,3.195,36.354,-7.889,1.0,,1942400.349
+1997,Put spread ATM/-10% | No hedge | Recover until whole,-18.181,136.545,-63.543,10.069,2002-09-20,0.0
+1997,Put spread ATM/-20% | No hedge | Recover until whole,-22.644,159.314,-96.479,7.023,2001-09-06,-10518.895
+1997,Naked ATM put | No hedge | Recover once,6.304,142.504,-88.323,4.268,,2859393.807
+1997,Naked ATM put | No hedge | Recover + 200d trend filter,9.421,32.097,-16.79,6.735,,3778818.992
+1998,Naked ATM put | No hedge | Fixed 1x,6.225,85.039,-26.213,1.0,,2774054.312
+1998,Naked ATM put | No hedge | Recover until whole,-41.009,204.676,-116.628,7.325,2001-09-17,-433764.829
+1998,Put spread ATM/-10% | No hedge | Fixed 1x,3.239,36.354,-7.889,1.0,,1923089.363
+1998,Put spread ATM/-10% | No hedge | Recover until whole,-28.513,127.423,-63.543,10.021,2001-09-21,0.0
+1998,Put spread ATM/-20% | No hedge | Recover until whole,-28.945,144.585,-96.479,7.023,2001-09-06,-3265.017
+1998,Naked ATM put | No hedge | Recover once,5.891,142.504,-88.323,4.268,,2678951.44
+1998,Naked ATM put | No hedge | Recover + 200d trend filter,9.369,32.097,-16.79,6.735,,3669986.565
+1999,Naked ATM put | No hedge | Fixed 1x,5.454,85.039,-26.213,1.0,,2499925.997
+1999,Naked ATM put | No hedge | Recover until whole,-42.895,141.109,-95.336,3.637,2001-09-17,-72228.39
+1999,Put spread ATM/-10% | No hedge | Fixed 1x,2.891,36.354,-7.889,1.0,,1795129.033
+1999,Put spread ATM/-10% | No hedge | Recover until whole,-28.513,114.627,-63.543,10.021,2002-09-20,0.0
+1999,Put spread ATM/-20% | No hedge | Recover until whole,-53.333,127.999,-86.522,7.023,2001-02-28,-39646.076
+1999,Naked ATM put | No hedge | Recover once,-32.145,134.216,-88.323,3.369,2002-05-02,-3300.009
+1999,Naked ATM put | No hedge | Recover + 200d trend filter,8.712,32.097,-16.79,6.735,,3395858.251
+2000,Naked ATM put | No hedge | Fixed 1x,4.634,85.039,-26.213,1.0,,2228356.092
+2000,Naked ATM put | No hedge | Recover until whole,-118.556,123.581,-90.507,3.637,2001-03-12,-168517.239
+2000,Put spread ATM/-10% | No hedge | Fixed 1x,2.515,36.354,-7.889,1.0,,1666601.106
+2000,Put spread ATM/-10% | No hedge | Recover until whole,-66.049,101.775,-63.543,10.021,2001-09-21,-0.0
+2000,Put spread ATM/-20% | No hedge | Recover until whole,-114.776,112.792,-71.315,6.227,2001-02-27,-90414.182
+2000,Naked ATM put | No hedge | Recover once,-109.768,114.919,-83.85,3.369,2001-03-12,-81897.654
+2000,Naked ATM put | No hedge | Recover + 200d trend filter,8.015,32.097,-16.79,6.735,,3124288.346
+2001,Naked ATM put | No hedge | Fixed 1x,6.979,49.006,-24.952,1.0,,2780347.9
+2001,Naked ATM put | No hedge | Recover until whole,13.569,107.278,-48.167,7.938,,4461196.299
+2001,Put spread ATM/-10% | No hedge | Fixed 1x,3.417,24.312,-7.889,1.0,,1871659.305
+2001,Put spread ATM/-10% | No hedge | Recover until whole,7.435,88.632,-27.513,10.588,,2896685.852
+2001,Put spread ATM/-20% | No hedge | Recover until whole,10.708,110.151,-36.156,8.666,,3731362.131
+2001,Naked ATM put | No hedge | Recover once,8.859,76.029,-48.167,4.268,,3259886.021
+2001,Naked ATM put | No hedge | Recover + 200d trend filter,8.328,32.097,-16.79,6.735,,3124288.346
+2002,Naked ATM put | No hedge | Fixed 1x,7.085,49.006,-24.952,1.0,,2736771.429
+2002,Naked ATM put | No hedge | Recover until whole,12.987,107.278,-48.167,7.938,,4183435.198
+2002,Put spread ATM/-10% | No hedge | Fixed 1x,3.571,24.312,-7.889,1.0,,1875222.411
+2002,Put spread ATM/-10% | No hedge | Recover until whole,7.566,88.632,-23.794,10.121,,2854576.573
+2002,Put spread ATM/-20% | No hedge | Recover until whole,10.562,110.151,-36.156,8.666,,3589040.835
+2002,Naked ATM put | No hedge | Recover once,8.092,76.029,-48.167,4.268,,2983508.771
+2002,Naked ATM put | No hedge | Recover + 200d trend filter,8.666,32.097,-16.79,6.735,,3124288.346
+2003,Naked ATM put | No hedge | Fixed 1x,7.901,49.006,-24.952,1.0,,2856468.589
+2003,Naked ATM put | No hedge | Recover until whole,12.822,107.278,-48.167,7.938,,4012581.936
+2003,Put spread ATM/-10% | No hedge | Fixed 1x,3.979,24.312,-7.889,1.0,,1934803.254
+2003,Put spread ATM/-10% | No hedge | Recover until whole,7.596,88.632,-23.794,10.121,,2784708.907
+2003,Put spread ATM/-20% | No hedge | Recover until whole,10.782,110.151,-36.156,8.666,,3533254.673
+2003,Naked ATM put | No hedge | Recover once,9.552,76.029,-48.167,4.268,,3244440.451
+2003,Naked ATM put | No hedge | Recover + 200d trend filter,9.041,32.097,-16.79,6.735,,3124288.346
+2004,Naked ATM put | No hedge | Fixed 1x,7.237,49.006,-24.952,1.0,,2628332.854
+2004,Naked ATM put | No hedge | Recover until whole,12.376,107.278,-48.167,7.938,,3784446.201
+2004,Put spread ATM/-10% | No hedge | Fixed 1x,3.667,24.312,-7.889,1.0,,1825161.165
+2004,Put spread ATM/-10% | No hedge | Recover until whole,7.445,88.632,-23.794,10.121,,2675066.818
+2004,Put spread ATM/-20% | No hedge | Recover until whole,10.484,110.151,-36.156,8.666,,3358761.469
+2004,Naked ATM put | No hedge | Recover once,8.961,76.029,-48.167,4.268,,3016304.715
+2004,Naked ATM put | No hedge | Recover + 200d trend filter,8.427,32.097,-16.79,6.735,,2896152.61
+2005,Naked ATM put | No hedge | Fixed 1x,7.359,49.006,-24.952,1.0,,2582471.435
+2005,Naked ATM put | No hedge | Recover until whole,12.533,107.062,-48.167,7.905,,3695065.217
+2005,Put spread ATM/-10% | No hedge | Fixed 1x,3.901,24.312,-7.889,1.0,,1838888.012
+2005,Put spread ATM/-10% | No hedge | Recover until whole,7.54,88.632,-23.794,10.121,,2621318.535
+2005,Put spread ATM/-20% | No hedge | Recover until whole,10.616,110.151,-36.156,8.666,,3282841.387
+2005,Naked ATM put | No hedge | Recover once,8.961,76.029,-48.167,4.268,,2926923.731
+2005,Naked ATM put | No hedge | Recover + 200d trend filter,8.584,32.097,-16.79,6.735,,2845812.333
+2006,Naked ATM put | No hedge | Fixed 1x,7.22,49.006,-24.952,1.0,,2480639.019
+2006,Naked ATM put | No hedge | Recover until whole,12.646,100.483,-48.167,6.887,,3593232.801
+2006,Put spread ATM/-10% | No hedge | Fixed 1x,3.73,24.312,-7.889,1.0,,1764966.163
+2006,Put spread ATM/-10% | No hedge | Recover until whole,7.546,88.632,-23.794,10.121,,2547396.686
+2006,Put spread ATM/-20% | No hedge | Recover until whole,10.67,103.309,-36.156,7.769,,3188094.094
+2006,Naked ATM put | No hedge | Recover once,8.9,76.029,-48.167,4.268,,2825091.315
+2006,Naked ATM put | No hedge | Recover + 200d trend filter,8.669,32.097,-16.79,6.735,,2777651.826
+2007,Naked ATM put | No hedge | Fixed 1x,7.58,49.006,-24.952,1.0,,2478853.617
+2007,Naked ATM put | No hedge | Recover until whole,12.928,95.903,-48.167,6.178,,3522328.199
+2007,Put spread ATM/-10% | No hedge | Fixed 1x,4.109,24.312,-7.889,1.0,,1801705.682
+2007,Put spread ATM/-10% | No hedge | Recover until whole,7.685,88.632,-23.794,10.121,,2499373.422
+2007,Put spread ATM/-20% | No hedge | Recover until whole,10.887,98.43,-36.156,7.727,,3124116.502
+2007,Naked ATM put | No hedge | Recover once,8.991,76.029,-48.167,4.268,,2754186.713
+2007,Naked ATM put | No hedge | Recover + 200d trend filter,8.943,32.097,-16.79,6.735,,2744804.994
+2008,Naked ATM put | No hedge | Fixed 1x,8.2,43.156,-24.952,1.0,,2516661.336
+2008,Naked ATM put | No hedge | Recover until whole,13.115,89.668,-48.167,5.244,,3425815.399
+2008,Put spread ATM/-10% | No hedge | Fixed 1x,4.366,20.837,-7.889,1.0,,1807596.011
+2008,Put spread ATM/-10% | No hedge | Recover until whole,7.737,88.632,-23.794,10.121,,2431138.586
+2008,Put spread ATM/-20% | No hedge | Recover until whole,11.005,91.675,-36.156,7.727,,3035551.292
+2008,Naked ATM put | No hedge | Recover once,8.962,76.029,-48.167,4.268,,2657673.913
+2008,Naked ATM put | No hedge | Recover + 200d trend filter,8.911,32.097,-16.79,6.735,,2648292.194
+2009,Naked ATM put | No hedge | Fixed 1x,9.771,23.171,-16.79,1.0,,2709661.264
+2009,Naked ATM put | No hedge | Recover until whole,13.563,33.222,-25.897,5.244,,3373158.16
+2009,Put spread ATM/-10% | No hedge | Fixed 1x,5.189,14.928,-7.889,1.0,,1907908.742
+2009,Put spread ATM/-10% | No hedge | Recover until whole,8.012,28.74,-20.333,8.993,,2401932.776
+2009,Put spread ATM/-20% | No hedge | Recover until whole,11.386,37.607,-30.271,7.727,,2992364.469
+2009,Naked ATM put | No hedge | Recover once,11.904,33.222,-25.897,4.268,,3082831.515
+2009,Naked ATM put | No hedge | Recover + 200d trend filter,9.42,32.097,-16.79,6.735,,2648292.194
+2010,Naked ATM put | No hedge | Fixed 1x,8.992,23.171,-16.79,1.0,,2483850.358
+2010,Naked ATM put | No hedge | Recover until whole,13.013,33.222,-25.897,5.244,,3147347.254
+2010,Put spread ATM/-10% | No hedge | Fixed 1x,4.785,14.928,-7.889,1.0,,1789507.162
+2010,Put spread ATM/-10% | No hedge | Recover until whole,7.778,28.74,-20.333,8.993,,2283531.196
+2010,Put spread ATM/-20% | No hedge | Recover until whole,10.997,37.607,-30.271,7.727,,2814693.659
+2010,Naked ATM put | No hedge | Recover once,11.254,33.222,-25.897,4.268,,2857020.609
+2010,Naked ATM put | No hedge | Recover + 200d trend filter,9.119,32.097,-16.79,6.735,,2504677.961
+2011,Naked ATM put | No hedge | Fixed 1x,8.579,23.171,-16.79,1.0,,2330073.519
+2011,Naked ATM put | No hedge | Recover until whole,12.858,33.222,-25.897,5.244,,2993570.415
+2011,Put spread ATM/-10% | No hedge | Fixed 1x,4.481,14.928,-7.889,1.0,,1694753.018
+2011,Put spread ATM/-10% | No hedge | Recover until whole,7.667,28.74,-20.333,8.993,,2188777.052
+2011,Put spread ATM/-20% | No hedge | Recover until whole,10.842,37.607,-30.271,7.727,,2680939.307
+2011,Naked ATM put | No hedge | Recover once,10.986,33.222,-25.897,4.268,,2703243.77
+2011,Naked ATM put | No hedge | Recover + 200d trend filter,8.713,32.097,-16.79,6.735,,2350901.123
+2012,Naked ATM put | No hedge | Fixed 1x,8.119,23.171,-16.79,1.0,,2177847.975
+2012,Naked ATM put | No hedge | Recover until whole,12.692,33.222,-25.897,5.244,,2841344.871
+2012,Put spread ATM/-10% | No hedge | Fixed 1x,4.285,14.928,-7.889,1.0,,1621734.374
+2012,Put spread ATM/-10% | No hedge | Recover until whole,7.691,28.74,-20.333,8.993,,2115758.408
+2012,Put spread ATM/-20% | No hedge | Recover until whole,10.744,37.607,-30.271,7.727,,2558750.703
+2012,Naked ATM put | No hedge | Recover once,10.691,33.222,-25.897,4.268,,2551018.226
+2012,Naked ATM put | No hedge | Recover + 200d trend filter,8.882,32.097,-16.79,6.735,,2288517.845
+2013,Naked ATM put | No hedge | Fixed 1x,8.536,23.171,-16.79,1.0,,2153365.606
+2013,Naked ATM put | No hedge | Recover until whole,13.054,33.222,-25.897,5.244,,2763725.247
+2013,Put spread ATM/-10% | No hedge | Fixed 1x,4.762,14.928,-7.889,1.0,,1643437.432
+2013,Put spread ATM/-10% | No hedge | Recover until whole,7.883,28.74,-20.333,8.993,,2065146.13
+2013,Put spread ATM/-20% | No hedge | Recover until whole,11.027,37.607,-30.271,7.727,,2489890.9
+2013,Naked ATM put | No hedge | Recover once,10.905,33.222,-25.897,4.268,,2473398.602
+2013,Naked ATM put | No hedge | Recover + 200d trend filter,9.216,32.097,-16.79,6.735,,2245204.171
+2014,Naked ATM put | No hedge | Fixed 1x,8.389,23.171,-16.79,1.0,,2048230.552
+2014,Naked ATM put | No hedge | Recover until whole,13.273,33.222,-25.897,5.244,,2658590.193
+2014,Put spread ATM/-10% | No hedge | Fixed 1x,4.503,14.928,-7.889,1.0,,1562656.298
+2014,Put spread ATM/-10% | No hedge | Recover until whole,7.878,28.74,-20.333,8.993,,1984364.997
+2014,Put spread ATM/-20% | No hedge | Recover until whole,11.129,37.607,-30.271,7.727,,2390611.173
+2014,Naked ATM put | No hedge | Recover once,10.95,33.222,-25.897,4.268,,2368263.548
+2014,Naked ATM put | No hedge | Recover + 200d trend filter,9.124,32.097,-16.79,6.735,,2140069.118
+2015,Naked ATM put | No hedge | Fixed 1x,8.169,23.171,-16.79,1.0,,1939320.328
+2015,Naked ATM put | No hedge | Recover until whole,13.477,33.222,-25.897,5.244,,2549679.969
+2015,Put spread ATM/-10% | No hedge | Fixed 1x,4.173,14.928,-7.889,1.0,,1479857.848
+2015,Put spread ATM/-10% | No hedge | Recover until whole,7.84,28.74,-20.333,8.993,,1901566.547
+2015,Put spread ATM/-20% | No hedge | Recover until whole,11.201,37.607,-30.271,7.727,,2288038.918
+2015,Naked ATM put | No hedge | Recover once,10.952,33.222,-25.897,4.268,,2259353.324
+2015,Naked ATM put | No hedge | Recover + 200d trend filter,8.967,32.097,-16.79,6.735,,2031158.894
+2016,Naked ATM put | No hedge | Fixed 1x,8.263,23.171,-16.79,1.0,,1867785.631
+2016,Naked ATM put | No hedge | Recover until whole,13.94,33.222,-25.897,5.244,,2464081.535
+2016,Put spread ATM/-10% | No hedge | Fixed 1x,4.276,14.928,-7.889,1.0,,1449090.756
+2016,Put spread ATM/-10% | No hedge | Recover until whole,8.101,28.74,-20.333,8.993,,1850812.046
+2016,Put spread ATM/-20% | No hedge | Recover until whole,11.552,37.607,-30.271,7.727,,2213201.533
+2016,Naked ATM put | No hedge | Recover once,11.176,33.222,-25.897,4.268,,2173754.89
+2016,Naked ATM put | No hedge | Recover + 200d trend filter,9.483,32.097,-16.79,6.735,,1995991.385
+2017,Naked ATM put | No hedge | Fixed 1x,7.864,23.171,-16.79,1.0,,1747542.061
+2017,Naked ATM put | No hedge | Recover until whole,14.137,33.222,-25.897,5.244,,2343837.965
+2017,Put spread ATM/-10% | No hedge | Fixed 1x,3.845,14.928,-7.889,1.0,,1365492.253
+2017,Put spread ATM/-10% | No hedge | Recover until whole,8.071,28.74,-20.333,8.993,,1767213.543
+2017,Put spread ATM/-20% | No hedge | Recover until whole,11.605,37.607,-30.271,7.727,,2103180.827
+2017,Naked ATM put | No hedge | Recover once,11.083,33.222,-25.897,4.268,,2053511.321
+2017,Naked ATM put | No hedge | Recover + 200d trend filter,9.909,32.097,-16.79,6.735,,1941892.847
+2018,Naked ATM put | No hedge | Fixed 1x,7.633,23.171,-16.79,1.0,,1649518.951
+2018,Naked ATM put | No hedge | Recover until whole,14.641,33.222,-25.897,5.244,,2245814.855
+2018,Put spread ATM/-10% | No hedge | Fixed 1x,3.391,14.928,-7.889,1.0,,1288543.336
+2018,Put spread ATM/-10% | No hedge | Recover until whole,8.112,28.74,-20.333,8.993,,1690264.626
+2018,Put spread ATM/-20% | No hedge | Recover until whole,11.87,37.607,-30.271,7.727,,2010021.523
+2018,Naked ATM put | No hedge | Recover once,11.229,33.222,-25.897,4.268,,1955488.21
+2018,Naked ATM put | No hedge | Recover + 200d trend filter,9.917,32.097,-16.79,6.735,,1843869.736
+2019,Naked ATM put | No hedge | Fixed 1x,9.338,23.171,-16.79,1.0,,1701495.85
+2019,Naked ATM put | No hedge | Recover until whole,15.067,33.222,-25.897,5.244,,2131924.876
+2019,Put spread ATM/-10% | No hedge | Fixed 1x,3.868,14.928,-7.889,1.0,,1290584.914
+2019,Put spread ATM/-10% | No hedge | Recover until whole,8.2,28.74,-20.333,8.993,,1616035.517
+2019,Put spread ATM/-20% | No hedge | Recover until whole,12.106,37.607,-30.271,7.727,,1909462.0
+2019,Naked ATM put | No hedge | Recover once,11.202,33.222,-25.897,2.422,,1841598.231
+2019,Naked ATM put | No hedge | Recover + 200d trend filter,10.392,22.149,-16.79,3.771,,1780733.902
+2020,Naked ATM put | No hedge | Fixed 1x,11.842,23.171,-16.401,1.0,,1769372.527
+2020,Naked ATM put | No hedge | Recover until whole,15.883,33.222,-25.897,5.244,,2031905.435
+2020,Put spread ATM/-10% | No hedge | Fixed 1x,4.609,14.928,-7.032,1.0,,1299430.256
+2020,Put spread ATM/-10% | No hedge | Recover until whole,8.404,28.74,-20.333,8.993,,1545995.62
+2020,Put spread ATM/-20% | No hedge | Recover until whole,12.59,37.607,-30.271,7.727,,1817945.731
+2020,Naked ATM put | No hedge | Recover once,11.414,33.222,-25.897,1.992,,1741578.79
+2020,Naked ATM put | No hedge | Recover + 200d trend filter,10.477,14.519,-4.071,1.995,,1680714.461
+2021,Naked ATM put | No hedge | Fixed 1x,8.35,23.171,-16.401,1.0,,1459293.148
+2021,Naked ATM put | No hedge | Recover until whole,13.123,33.222,-25.897,5.244,,1721826.055
+2021,Put spread ATM/-10% | No hedge | Fixed 1x,3.011,14.928,-7.032,1.0,,1165626.41
+2021,Put spread ATM/-10% | No hedge | Recover until whole,7.494,28.74,-20.333,8.993,,1412191.775
+2021,Put spread ATM/-20% | No hedge | Recover until whole,10.957,37.607,-30.271,7.727,,1602660.628
+2021,Naked ATM put | No hedge | Recover once,7.845,33.222,-25.897,1.992,,1431499.411
+2021,Naked ATM put | No hedge | Recover + 200d trend filter,8.885,14.519,-4.071,1.995,,1488699.07
+2022,Naked ATM put | No hedge | Fixed 1x,7.62,19.573,-16.401,1.0,,1343208.161
+2022,Naked ATM put | No hedge | Recover until whole,12.754,27.04,-16.401,3.398,,1574388.54
+2022,Put spread ATM/-10% | No hedge | Fixed 1x,3.043,12.176,-7.032,1.0,,1137057.832
+2022,Put spread ATM/-10% | No hedge | Recover until whole,7.271,22.501,-7.032,3.166,,1327479.772
+2022,Put spread ATM/-20% | No hedge | Recover until whole,10.658,25.301,-15.588,4.046,,1480032.4
+2022,Naked ATM put | No hedge | Recover once,12.754,27.04,-16.401,3.398,,1574388.54
+2022,Naked ATM put | No hedge | Recover + 200d trend filter,7.577,12.894,-4.071,1.995,,1341261.555
+2023,Naked ATM put | No hedge | Fixed 1x,10.914,17.132,-4.071,1.0,,1382762.439
+2023,Naked ATM put | No hedge | Recover until whole,12.829,27.04,-4.071,1.992,,1449929.75
+2023,Put spread ATM/-10% | No hedge | Fixed 1x,4.917,12.176,-5.466,1.0,,1172434.208
+2023,Put spread ATM/-10% | No hedge | Recover until whole,7.58,22.501,-5.466,3.098,,1265838.945
+2023,Put spread ATM/-20% | No hedge | Recover until whole,10.997,25.301,-4.522,2.255,,1385676.755
+2023,Naked ATM put | No hedge | Recover once,12.829,27.04,-4.071,1.992,,1449929.75
+2023,Naked ATM put | No hedge | Recover + 200d trend filter,9.73,12.894,-4.071,1.995,,1341261.555
+2024,Naked ATM put | No hedge | Fixed 1x,9.043,17.132,-4.071,1.0,,1227037.871
+2024,Naked ATM put | No hedge | Recover until whole,11.718,27.04,-4.071,1.992,,1294205.183
+2024,Put spread ATM/-10% | No hedge | Fixed 1x,2.96,12.176,-5.466,1.0,,1074315.509
+2024,Put spread ATM/-10% | No hedge | Recover until whole,6.68,22.501,-5.466,3.098,,1167720.246
+2024,Put spread ATM/-20% | No hedge | Recover until whole,9.949,25.301,-4.522,2.255,,1249780.6
+2024,Naked ATM put | No hedge | Recover once,11.718,27.04,-4.071,1.992,,1294205.183
+2024,Naked ATM put | No hedge | Recover + 200d trend filter,7.39,12.894,-4.071,1.995,,1185536.987
