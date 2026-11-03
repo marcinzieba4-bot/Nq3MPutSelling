@@ -30,20 +30,17 @@ Takeaways:
 * **Recovery sizing is a martingale.** It was wiped out in 5 of 38 start years for the naked put and in 13-14 of 38 for put spreads. On the main calendar it only survived 2000-02 because one 11x-size quarter happened to expire OTM. Don't upsize after losses. Premiums are already about 40% richer after a losing quarter, so the same size recovers faster on its own.
 * **The OTM wing and the delta cap are risk dials.** The wing cuts the tail but cuts the return about in proportion. The delta cap (short futures only for delta above the entry delta) was the only tweak that improved Sharpe and drawdown on all three roll calendars.
 
-## Start in 2008 with a 50% drawdown limit (USD)
+## From 2008: win back every loss in one quarter ($100k base, USD)
 
-$1M account from 2008-03-20, ATM puts on $1M of NQ notional each quarter. After a loss the next put is made bigger to win the loss back (your rule), but never so big that a 45% NQ fall by expiry could take the account more than 50% below its high. Full quarterly ledger: [`results/usd_ledger_2008_dd50_recover.csv`](results/usd_ledger_2008_dd50_recover.csv) and report section 9.
+Every quarter sells ATM puts on $100k of NQ notional from 2008-03-20; profits are not reinvested. After a loss the next put is sized so that, if it expires OTM, its premium repays the whole cumulated loss plus the normal premium. No capital or drawdown limit. Ledger: [`results/recovery_2008_ledger.csv`](results/recovery_2008_ledger.csv), campaigns: [`results/recovery_2008_campaigns.csv`](results/recovery_2008_campaigns.csv), report section 9.
 
-| | USD |
-|---|---|
-| Profit from puts that expired worthless (53 of 74 quarters) | $2,650,667 |
-| Profit from puts in the money but above breakeven (10 quarters) | $254,849 |
-| Losses from puts in the money (11 quarters) | -$1,108,070 |
-| Net profit | $1,797,449 |
-| Deepest cumulated loss to win back (at an expiry) | -$349,612 |
-| Worst day, marked to market | -$502,880 (46.5% below the high) |
-| Same limit, fixed size: net profit / deepest cumulated loss | $1,456,487 / -$299,245 |
-| Your rule without the limit: net profit / worst day | $2,426,804 / -$896,676 (83%) |
+| | Recovery rule | Fixed size |
+|---|---|---|
+| Normal P&L when the put expires OTM (premium on $100k, average) | $4,216 | same |
+| Total P&L, 2008 to 2026 | $242,680 | $151,765 |
+| Worst cumulated loss at an expiry | -$53,140 | -$29,924 |
+| Worst cumulated loss on any day (marked to market) | -$104,425 | -$40,304 |
+| Biggest position | 7.94x = $793,846 notional | $100,000 |
 
 ## Run it
 

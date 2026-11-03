@@ -220,31 +220,35 @@ def fig_hedging(path: Path, runs: dict, mp):
     plt.close(fig)
 
 
-def fig_usd_ledger(path: Path, usd: dict):
-    led = usd["ledger"]
-    sm = usd["summary"]
+def fig_campaigns(path: Path, camp: dict):
+    led, sm = camp["ledger"], camp["summary"]
     x = led[led.status == "settled"].copy()
     x["exp"] = pd.to_datetime(x.expiry)
-    pnl = (x.profit_usd.fillna(0) + x.loss_usd.fillna(0)) / 1e3
-    fig, ax = plt.subplots(figsize=(11, 5.6))
+    pnl = x.pnl_usd / 1e3
+    fig, ax = plt.subplots(figsize=(11, 5.8))
     w = 62
     up = pnl >= 0
-    ax.bar(x.exp[up], pnl[up], width=w, color=GAIN, label="Profit in the quarter")
-    ax.bar(x.exp[~up], pnl[~up], width=w, color=LOSS, label="Loss in the quarter (put finished in the money)")
+    ax.bar(x.exp[up], pnl[up], width=w, color=GAIN, label="P&L of the quarter (profit)")
+    ax.bar(x.exp[~up], pnl[~up], width=w, color=LOSS, label="P&L of the quarter (loss, put finished in the money)")
     ax.fill_between(x.exp, x.cum_loss_usd / 1e3, 0, step="post", color=S[6], alpha=0.16, lw=0)
-    ax.step(x.exp, x.cum_loss_usd / 1e3, where="post", color=S[6], lw=1.6, label="Cumulated loss still to win back")
+    ax.step(x.exp, x.cum_loss_usd / 1e3, where="post", color=S[6], lw=1.6, label="Cumulated loss to win back (at expiry)")
+    # mark only quarters whose worst day was clearly deeper than both where they started and ended
+    deep = x.worst_cum_loss_in_quarter_usd < (np.minimum(x.cum_loss_usd.shift(1).fillna(0), x.cum_loss_usd) - 5000)
+    ax.plot(x.exp[deep], x.worst_cum_loss_in_quarter_usd[deep] / 1e3, linestyle="none", marker="v", ms=6,
+            mfc=SURFACE, mec=S[6], mew=1.4, label="Worst point inside the quarter (marked to market)")
     ax.axhline(0, color=AXIS, lw=0.8)
     ax.yaxis.set_major_formatter(matplotlib.ticker.FuncFormatter(lambda v, _: f"-${abs(v):,.0f}k" if v < 0 else f"${v:,.0f}k"))
     i = x.cum_loss_usd.idxmin()
-    ax.annotate(f"-${abs(x.cum_loss_usd[i]) / 1e3:,.0f}k to win back ({x.exp[i]:%b %Y})", (x.exp[i], x.cum_loss_usd[i] / 1e3),
-                xytext=(14, -6), textcoords="offset points", fontsize=9, color=INK2)
-    j = pnl.idxmax()
-    ax.annotate(f"+${pnl[j]:,.0f}k ({x.exp[j]:%b %Y})", (x.exp[j], pnl[j]), xytext=(8, 2), textcoords="offset points",
-                fontsize=9, color=INK2)
-    ax.set_title(f"$1M account from {pd.Timestamp(sm['first_roll']):%b %Y}: profit or loss each quarter, and the loss "
-                 "still to win back (USD)")
+    ax.annotate(f"-${abs(x.cum_loss_usd[i]) / 1e3:,.0f}k at the {x.exp[i]:%b %Y} expiry", (x.exp[i], x.cum_loss_usd[i] / 1e3),
+                xytext=(16, -2), textcoords="offset points", fontsize=9, color=INK2)
+    j = x.worst_cum_loss_in_quarter_usd.idxmin()
+    ax.annotate(f"-${abs(x.worst_cum_loss_in_quarter_usd[j]) / 1e3:,.0f}k inside the quarter to {x.exp[j]:%b %Y}, "
+                f"holding {x.size_x[j]:.1f}x size", (x.exp[j], x.worst_cum_loss_in_quarter_usd[j] / 1e3),
+                xytext=(12, -4), textcoords="offset points", fontsize=9, color=INK2)
+    ax.set_title(f"$100k base notional from {pd.Timestamp(sm['first_roll']):%b %Y}, every loss won back in one quarter: "
+                 "P&L per quarter and cumulated loss (USD)", fontsize=11)
     ax.set_ylabel("USD")
-    ax.legend(loc="upper left", ncol=1)
+    ax.legend(loc="lower right", ncol=1)
     ax.xaxis.set_major_locator(mdates.YearLocator(2))
     ax.xaxis.set_major_formatter(mdates.DateFormatter("%Y"))
     fig.tight_layout()
@@ -294,7 +298,7 @@ def _metric_table(rows: pd.DataFrame, label_cols: list[str], cols=None) -> str:
 
 
 # ----------------------------------------------------------------------------- build
-def build(root: Path, df, ctx, runs, grid, grid01, pt, sy, sens, lad, cal, cal_runs, pao, snap, usd) -> None:
+def build(root: Path, df, ctx, runs, grid, grid01, pt, sy, sens, lad, cal, cal_runs, pao, snap, camp) -> None:
     figs = root / "reports" / "figures"
     figs.mkdir(parents=True, exist_ok=True)
     mp = ctx.mp
@@ -303,9 +307,9 @@ def build(root: Path, df, ctx, runs, grid, grid01, pt, sy, sens, lad, cal, cal_r
     fig_recovery(figs / "3_recovery_sizing.png", runs, cal_runs, mp)
     fig_start_year(figs / "4_recovery_by_start_year.png", sy)
     fig_hedging(figs / "5_delta_hedging.png", runs, mp)
-    fig_usd_ledger(figs / "6_usd_2008_dd50.png", usd)
+    fig_campaigns(figs / "6_recovery_2008.png", camp)
     (root / "reports" / "REPORT.md").write_text(_markdown(df, ctx, runs, grid, grid01, pt, sy, sens, lad, cal,
-                                                          pao, snap, usd))
+                                                          pao, snap, camp))
 
 
 def _usd(v: float) -> str:
@@ -314,64 +318,70 @@ def _usd(v: float) -> str:
     return f"-${abs(v):,.0f}" if v < 0 else f"${v:,.0f}"
 
 
-def _usd_section(usd: dict) -> list[str]:
-    sm, fx, nl = usd["summary"], usd["summary_fixed"], usd["summary_no_limit"]
-    led, cal = usd["ledger"], usd["calendars"]
+def _campaign_section(camp: dict) -> list[str]:
+    sm, fx, led, cp, cal = camp["summary"], camp["fixed_summary"], camp["ledger"], camp["campaigns"], camp["calendars"]
     L: list[str] = []
     w = L.append
-    rec_date = led[(led.status == "settled") & (led.cum_loss_usd == 0) &
-                   (pd.to_datetime(led.expiry) > pd.Timestamp(sm["deepest_cum_loss_at"]))].expiry
-    rec_txt = f"back at a new high by the {pd.Timestamp(rec_date.iloc[0]):%b %Y} expiry" if len(rec_date) else "not yet back at its high"
-    lim = cal[cal.sizing == A.DD50_RECOVER.name]
-    w("## 9. Start in 2008 with a 50% drawdown limit (in dollars)\n")
-    w(f"*A $1,000,000 account from the first 2008 roll ({sm['first_roll']}). Every quarter it sells ATM puts on "
-      f"$1,000,000 of NQ notional (about {led.nq_contracts.iloc[0]:.0f} NQ in 2008, {led.nq_contracts.iloc[-1]:.1f} NQ today). "
-      "After a loss your rule makes the next put bigger to win the loss back, but never bigger than what a 45% NQ fall "
-      "by expiry could lose without taking the account more than 50% below its high. 45% is the worst fall inside a "
-      "quarter before 2008 (-36%, Oct 1987) plus a buffer for option prices jumping in a crash. "
-      "Profits are not reinvested; a smaller account scales every dollar figure down in proportion "
-      "(MNQ options are 1/10 of NQ).*\n")
-    w(f"* **Puts that expired worthless:** {sm['n_worthless']} of {sm['quarters']} quarters, "
-      f"**{_usd(sm['profit_worthless'])}** in total (about {_usd(sm['avg_profit_worthless'])} per quarter).")
-    w(f"* **Finished in the money but above breakeven:** {sm['n_itm_small']} quarters, {_usd(sm['profit_itm_small'])}.")
-    w(f"* **Finished in the money at a loss:** {sm['n_losses']} quarters, **{_usd(sm['losses'])}** in total; "
-      f"the worst single quarter {_usd(sm['worst_quarter_loss'])}.")
-    w(f"* **Net:** {_usd(sm['net_profit'])}; the account ends at {_usd(sm['final_account'])}.")
-    w(f"* **Deepest cumulated loss** (still to win back at an expiry): **{_usd(sm['deepest_cum_loss'])}** at the "
-      f"{pd.Timestamp(sm['deepest_cum_loss_at']):%b %Y} expiry, {rec_txt} "
-      f"({sm['longest_underwater_q']} quarters). On the worst day ({sm['deepest_mtm_loss_on']}) the open positions "
-      f"marked the account {_usd(sm['deepest_mtm_loss'])} below its high, {sm['deepest_mtm_dd_pct']:.1f}%: inside the 50% limit.")
-    w(f"* The limit cut the recovery size in {sm['quarters_limited']} quarters; the largest position was "
-      f"{sm['max_size_x']:.2f}x the base.")
-    w(f"* **Same limit, never upsizing:** ends at {_usd(fx['final_account'])}, deepest cumulated loss "
-      f"{_usd(fx['deepest_cum_loss'])}, worst day {fx['deepest_mtm_dd_pct']:.1f}% down.")
-    w(f"* **Your rule without the limit:** ends at {_usd(nl['final_account'])} but was {_usd(nl['deepest_mtm_loss'])} "
-      f"({nl['deepest_mtm_dd_pct']:.0f}%) down on {nl['deepest_mtm_dd_on']}, far past 50%.")
-    w(f"* On the other two roll calendars the limit also held: worst day "
-      + ", ".join(f"{r.deepest_mtm_dd_pct:.1f}% ({r.calendar})" for r in lim.itertuples()) + ".\n")
-    w("![USD ledger](figures/6_usd_2008_dd50.png)\n")
-    by = usd["by_year"].reset_index()
-    by.columns = ["Year (expiries)", "Quarters", "Expired worthless", "Profit, expired worthless", "Profit, ITM above breakeven",
-                  "Losses", "Worst cumulated loss", "Account at year end"]
-    money = {c: _usd for c in by.columns[3:]}
-    money.update({"Year (expiries)": lambda v: f"{int(v)}", "Quarters": lambda v: f"{int(v)}",
-                  "Expired worthless": lambda v: f"{int(v)}"})
-    w(_md_table(by, money) + "\n")
-    w("Every quarter (USD):\n")
-    q = led.copy()
-    q["profit_usd"] = q.profit_usd.map(lambda v: _usd(v) if pd.notna(v) else "")
-    q["loss_usd"] = q.loss_usd.map(lambda v: _usd(v) if pd.notna(v) else "")
-    q = q[["entry", "expiry", "nq_contracts", "premium_usd", "outcome", "profit_usd", "loss_usd", "cum_loss_usd", "account_usd"]]
-    q.columns = ["Sold", "Expires", "NQ puts sold", "Premium collected", "Outcome", "Profit", "Loss",
-                 "Cumulated loss to win back", "Account"]
-    w(_md_table(q, {"NQ puts sold": lambda v: f"{v:.2f}", "Premium collected": _usd,
-                    "Cumulated loss to win back": _usd, "Account": _usd}) + "\n")
-    w("CSV: [`results/usd_ledger_2008_dd50_recover.csv`](../results/usd_ledger_2008_dd50_recover.csv) "
-      "(fixed-size version: `usd_ledger_2008_dd50_fixed.csv`).\n")
+    worst = led.loc[led.worst_cum_loss_in_quarter_usd.idxmin()]
+    w("## 9. From 2008: win back every loss in one quarter ($100k base, in dollars)\n")
+    w(f"*Every quarter sells ATM puts on $100,000 of NQ notional, starting with the first 2008 roll ({sm['first_roll']}). "
+      "After a loss the next put is sized so that, if it expires out of the money, its premium repays the whole cumulated "
+      "loss plus the normal quarter's premium. A campaign starts with a loss and ends when the loss is won back; the next "
+      "one starts again from $100,000. Profits are not reinvested and nothing limits the size, so the worst cumulated "
+      "loss is what you must be able to carry.*\n")
+    w(f"* **Normal P&L when the put expires OTM** (premium on $100k): average **{_usd(sm['base_premium_avg'])}** a quarter, "
+      f"from {_usd(sm['base_premium_min'])} ({sm['base_premium_min_at']}) to {_usd(sm['base_premium_max'])} "
+      f"({sm['base_premium_max_at']}).")
+    w(f"* {sm['quarters']} quarters: {sm['n_otm']} expired OTM, {sm['n_itm_profit']} finished in the money but above "
+      f"breakeven, {sm['n_losses']} lost money ({_usd(sm['loss_total'])} in total).")
+    w(f"* **Total P&L:** {_usd(sm['total_pnl'])}, about {_usd(sm['total_pnl_per_year'])} a year, not reinvested.")
+    w(f"* **Worst cumulated loss:** **{_usd(sm['worst_cum_loss'])}** at the {pd.Timestamp(sm['worst_cum_loss_at']):%b %Y} "
+      f"expiry. Inside the next quarter ({sm['worst_cum_loss_mtm_quarter']}) it reached **{_usd(sm['worst_cum_loss_mtm'])}** "
+      f"marked to market, while the rule held {worst.size_x:.2f}x size = {_usd(worst.notional_usd)} of notional.")
+    w(f"* {sm['campaigns']} campaigns; every finished one was won back within {int(cp.loc[cp.won_back.str[:2] == '20', 'quarters'].max())} "
+      "quarters.")
+    w(f"* **Fixed size, no recovery** (same trades at $100k every quarter): {_usd(fx['total_pnl'])} total, worst cumulated "
+      f"loss {_usd(fx['worst_cum_loss'])} ({_usd(fx['worst_cum_loss_mtm'])} on the worst day).")
+    w("* **Other roll calendars from 2008:** " + "; ".join(
+        f"{r.calendar}: worst {_usd(r.worst_cum_loss)} at expiry, {_usd(r.worst_cum_loss_mtm)} on the worst day, "
+        f"biggest position {_usd(r.max_notional)}" for r in cal.itertuples() if r.calendar != "Mar/Jun/Sep/Dec") + ".")
+    w(f"* **Capital:** holding {_usd(worst.notional_usd)} of puts needs margin of roughly {_usd(0.10 * worst.notional_usd)} "
+      f"(10% of notional) on top of the {_usd(sm['worst_cum_loss_mtm'])} hole: about "
+      f"{_usd(abs(sm['worst_cum_loss_mtm']) + 0.10 * worst.notional_usd)} of capital per $100k of base notional.\n")
+    w("![campaigns](figures/6_recovery_2008.png)\n")
+    t = cp.copy()
+    t["recovery_quarter_pnl_usd"] = t.recovery_quarter_pnl_usd.map(lambda v: _usd(v) if pd.notna(v) else "")
+    t = t[["started", "quarters", "losing_quarters", "worst_cum_loss_usd", "worst_cum_loss_mtm_usd", "max_size_x",
+           "max_notional_usd", "won_back", "recovery_quarter_pnl_usd"]]
+    t.columns = ["Campaign started", "Quarters", "Losing quarters", "Worst cumulated loss (expiry)", "Worst on any day",
+                 "Biggest size (x)", "Biggest notional", "Won back at expiry", "P&L of the winning quarter"]
+    w("**Campaigns** (from the first loss until it is won back):\n")
+    w(_md_table(t, {"Quarters": lambda v: f"{int(v)}", "Losing quarters": lambda v: f"{int(v)}",
+                    "Worst cumulated loss (expiry)": _usd, "Worst on any day": _usd,
+                    "Biggest size (x)": lambda v: f"{v:.2f}", "Biggest notional": _usd}) + "\n")
+    by = camp["by_year"].reset_index()
+    by.columns = ["Year (expiries)", "Quarters", "OTM quarters", "Normal P&L if OTM (avg, $100k)", "P&L of OTM quarters",
+                  "P&L of other quarters", "Worst cumulated loss (expiry)", "Worst on any day", "Biggest notional",
+                  "Total P&L at year end"]
+    fm = {c: _usd for c in by.columns[3:]}
+    fm.update({c: (lambda v: f"{int(v)}") for c in by.columns[:3]})
+    w("**By year:**\n")
+    w(_md_table(by, fm) + "\n")
+    q = led[["entry", "expiry", "normal_pnl_if_otm_usd", "size_x", "notional_usd", "premium_usd", "outcome", "pnl_usd",
+             "cum_loss_usd", "worst_cum_loss_in_quarter_usd", "total_pnl_usd"]].copy()
+    q.columns = ["Sold", "Expires", "Normal P&L if OTM ($100k)", "Size (x)", "Notional", "Premium", "Outcome", "P&L",
+                 "Cumulated loss (expiry)", "Worst inside quarter", "Total P&L"]
+    fq = {c: _usd for c in ["Normal P&L if OTM ($100k)", "Notional", "Premium", "P&L", "Cumulated loss (expiry)",
+                            "Worst inside quarter", "Total P&L"]}
+    fq["Size (x)"] = lambda v: f"{v:.2f}"
+    w("**Every quarter:**\n")
+    w(_md_table(q, fq) + "\n")
+    w("CSV: [`results/recovery_2008_ledger.csv`](../results/recovery_2008_ledger.csv), "
+      "[`results/recovery_2008_campaigns.csv`](../results/recovery_2008_campaigns.csv).\n")
     return L
 
 
-def _markdown(df, ctx, runs, grid, grid01, pt, sy, sens, lad, cal, pao, snap, usd) -> str:
+def _markdown(df, ctx, runs, grid, grid01, pt, sy, sens, lad, cal, pao, snap, camp) -> str:
     mp = ctx.mp
     settled = pt[pt.status == "settled"]
     nq = A.NAKED.name
@@ -469,13 +479,12 @@ def _markdown(df, ctx, runs, grid, grid01, pt, sy, sens, lad, cal, pao, snap, us
           "Under your rule, a loss at the 18-Dec expiry would trigger a bigger position. The backtest says roll at normal size, "
           "because today's rich premium already does part of the recovery.\n")
 
-    usm, unl = usd["summary"], usd["summary_no_limit"]
-    w(f"8. **Start in 2008 with a 50% drawdown limit (section 9).** $1M from {usm['first_roll']}, your recovery rule capped "
-      f"so a 45% NQ crash could not take the account more than 50% below its high: puts that expired worthless earned "
-      f"{_usd(usm['profit_worthless'])} over {usm['n_worthless']} quarters, losing quarters cost {_usd(usm['losses'])}, "
-      f"net {_usd(usm['net_profit'])}. The deepest cumulated loss was {_usd(usm['deepest_cum_loss'])} "
-      f"({pd.Timestamp(usm['deepest_cum_loss_at']):%b %Y}); the worst day was {usm['deepest_mtm_dd_pct']:.1f}% below the high. "
-      f"Without the limit the same rule was {unl['deepest_mtm_dd_pct']:.0f}% down on {unl['deepest_mtm_dd_on']}.\n")
+    csm, cfx = camp["summary"], camp["fixed_summary"]
+    w(f"8. **From 2008, winning back every loss in one quarter (section 9).** On $100k of base notional, not reinvested: "
+      f"a normal quarter that expires OTM pays about {_usd(csm['base_premium_avg'])}; total P&L {_usd(csm['total_pnl'])} "
+      f"(fixed size: {_usd(cfx['total_pnl'])}). The worst cumulated loss was {_usd(csm['worst_cum_loss'])} at an expiry and "
+      f"{_usd(csm['worst_cum_loss_mtm'])} inside a quarter, holding up to {csm['max_size_x']:.1f}x size "
+      f"({_usd(csm['max_notional'])} of notional).\n")
     w("## 1. What was tested\n")
     w("* **Trade.** At the close of each quarterly NQ expiry (3rd Friday of Mar/Jun/Sep/Dec), sell the put that expires "
       "at the next quarterly expiry (~13 weeks) with the **strike at the futures price (ATM-forward)**. Hold it to expiry. "
@@ -641,7 +650,7 @@ def _markdown(df, ctx, runs, grid, grid01, pt, sy, sens, lad, cal, pao, snap, us
     w("Check these against live quotes before trading. The model ignores the current skew and term structure of NQ "
       "options specifically.\n")
 
-    L.extend(_usd_section(usd))
+    L.extend(_campaign_section(camp))
     w("## 10. Limitations\n")
     w("* Premiums are reconstructed from VXN/VIX, not traded quotes. Error is probably ±10% of premium, and larger before 2001 "
       "(VXN proxy) and before 1990 (VXO-based). NQ options did not exist before ~1999-2000; earlier years are a "

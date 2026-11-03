@@ -418,3 +418,133 @@ def usd_scenario(df: pd.DataFrame, vp: VolParams, mp: MarketParams, start: str =
     return {"ledger": led, "summary": sm, "ledger_fixed": led_fx, "summary_fixed": sm_fx,
             "summary_no_limit": sm_nolim, "calendars": pd.DataFrame(cal_rows), "by_year": ledger_by_year(led),
             "by_year_fixed": ledger_by_year(led_fx)}
+
+
+# ----------------------------------------------------------------------------- recovery campaigns ($ base, no limit)
+def recovery_campaigns(df: pd.DataFrame, vp: VolParams, mp: MarketParams, start: str = "2008-01-01",
+                       base: float = 100_000.0, months=(3, 6, 9, 12), cycle_start: str = "1986-03-01",
+                       sizing: Sizing = RECOVER) -> dict:
+    """The recovery rule with no capital or drawdown limit, from `start`, on a fixed base notional.
+
+    Every quarter sells ATM puts on `base` of NQ notional. After a loss the next sale is sized so that,
+    if it expires out of the money, its premium repays the whole cumulated loss plus the normal
+    quarter's premium. Profits are not reinvested. Capital is treated as unlimited, so nothing caps the
+    size: the worst cumulated loss is the capital the rule needs.
+    """
+    big = replace(mp, capital=1e12, base_notional=base)
+    ctx = Context(df, vp, big, months, cycle_start)
+    res = ctx.run(NAKED, NO_HEDGE, sizing, start)
+    units = {u.cycle.entry: u for u in ctx.units(NAKED, NO_HEDGE)}
+    C0 = big.capital
+    eq = res.daily - C0                       # cumulative P&L in USD, daily marks
+    rows, hwm = [], 0.0
+    for _, r in res.cycles.iterrows():
+        u = units[r.entry]
+        pnl = r.pnl_usd
+        cum = r.equity - C0
+        days = eq[(eq.index >= r.entry) & (eq.index <= min(r.expiry, eq.index[-1]))]
+        worst_mtm = min(0.0, float(days.min()) - hwm)
+        if r.open:
+            outcome = "open (marked to market)"
+        elif r.S_T >= r.K1:
+            outcome = "expired OTM"
+        elif pnl >= 0:
+            outcome = "ITM, still a profit"
+        else:
+            outcome = "ITM, loss"
+        if not r.open:
+            hwm = max(hwm, cum)
+        rows.append({
+            "entry": r.entry.date(), "expiry": r.expiry.date(), "status": "open" if r.open else "settled",
+            "normal_pnl_if_otm_usd": round(base * u.premium_frac),
+            "size_x": round(r.mult, 2), "notional_usd": round(r.notional),
+            "premium_usd": round(r.premium_usd), "outcome": outcome, "pnl_usd": round(pnl),
+            "cum_loss_usd": round(min(0.0, cum - hwm)), "worst_cum_loss_in_quarter_usd": round(worst_mtm),
+            "total_pnl_usd": round(cum),
+        })
+    led = pd.DataFrame(rows)
+
+    # campaigns: from a losing quarter at a high until the loss is fully won back
+    camps, cur = [], None
+    for i, r in led.iterrows():
+        before = 0.0 if i == 0 else led.cum_loss_usd[i - 1]
+        if cur is None and before == 0 and (r.pnl_usd < 0 or r.cum_loss_usd < 0):
+            cur = {"started": r.entry, "quarters": 0, "losing_quarters": 0, "worst_cum_loss_usd": 0.0,
+                   "worst_cum_loss_mtm_usd": 0.0, "max_size_x": 0.0, "max_notional_usd": 0.0}
+        if cur is not None:
+            cur["quarters"] += 1
+            cur["losing_quarters"] += int(r.pnl_usd < 0)
+            cur["worst_cum_loss_usd"] = min(cur["worst_cum_loss_usd"], r.cum_loss_usd)
+            cur["worst_cum_loss_mtm_usd"] = min(cur["worst_cum_loss_mtm_usd"], r.worst_cum_loss_in_quarter_usd)
+            cur["max_size_x"] = max(cur["max_size_x"], r.size_x)
+            cur["max_notional_usd"] = max(cur["max_notional_usd"], r.notional_usd)
+            if r.status == "open":
+                cur["won_back"] = "still open"
+                camps.append(cur)
+                cur = None
+            elif r.cum_loss_usd == 0:
+                cur["won_back"] = str(r.expiry)
+                cur["recovery_quarter_pnl_usd"] = r.pnl_usd
+                camps.append(cur)
+                cur = None
+    if cur is not None:
+        cur["won_back"] = "not yet"
+        camps.append(cur)
+    camp = pd.DataFrame(camps)
+
+    s = led[led.status == "settled"]
+    otm = s[s.outcome == "expired OTM"]
+    normal = otm[otm.size_x <= 1.0001]
+    i_worst = s.cum_loss_usd.idxmin()
+    i_mtm = led.worst_cum_loss_in_quarter_usd.idxmin()
+    summary = {
+        "base_notional": base, "first_roll": str(s.entry.iloc[0]), "last_expiry": str(s.expiry.iloc[-1]),
+        "quarters": len(s), "n_otm": len(otm), "n_itm_profit": int((s.outcome == "ITM, still a profit").sum()),
+        "n_losses": int((s.pnl_usd < 0).sum()),
+        "base_premium_avg": float(s.normal_pnl_if_otm_usd.mean()), "base_premium_min": float(s.normal_pnl_if_otm_usd.min()),
+        "base_premium_max": float(s.normal_pnl_if_otm_usd.max()),
+        "base_premium_min_at": str(s.entry[s.normal_pnl_if_otm_usd.idxmin()]),
+        "base_premium_max_at": str(s.entry[s.normal_pnl_if_otm_usd.idxmax()]),
+        "normal_otm_pnl_avg": float(normal.pnl_usd.mean()), "normal_otm_pnl_min": float(normal.pnl_usd.min()),
+        "normal_otm_pnl_max": float(normal.pnl_usd.max()), "n_normal_otm": len(normal),
+        "otm_pnl_total": float(otm.pnl_usd.sum()), "loss_total": float(s.loc[s.pnl_usd < 0, "pnl_usd"].sum()),
+        "total_pnl": float(s.total_pnl_usd.iloc[-1]),
+        "total_pnl_per_year": float(s.total_pnl_usd.iloc[-1]) / ((pd.Timestamp(s.expiry.iloc[-1]) - pd.Timestamp(s.entry.iloc[0])).days / 365.25),
+        "worst_cum_loss": float(s.cum_loss_usd.min()), "worst_cum_loss_at": str(s.expiry[i_worst]),
+        "worst_cum_loss_mtm": float(led.worst_cum_loss_in_quarter_usd.min()),
+        "worst_cum_loss_mtm_quarter": f"{led.entry[i_mtm]} to {led.expiry[i_mtm]}",
+        "worst_quarter_loss": float(s.pnl_usd.min()),
+        "max_size_x": float(s.size_x.max()), "max_notional": float(s.notional_usd.max()),
+        "campaigns": len(camp),
+    }
+    return {"ledger": led, "campaigns": camp, "summary": summary, "run": res}
+
+
+def campaigns_by_calendar(df: pd.DataFrame, vp: VolParams, mp: MarketParams, start: str = "2008-01-01",
+                          base: float = 100_000.0) -> pd.DataFrame:
+    rows = []
+    for cname, (months, cstart) in CALENDARS.items():
+        out = recovery_campaigns(df, vp, mp, start, base, months, cstart)
+        sm = out["summary"]
+        rows.append({"calendar": cname, "first_roll": sm["first_roll"], "total_pnl": sm["total_pnl"],
+                     "worst_cum_loss": sm["worst_cum_loss"], "worst_cum_loss_mtm": sm["worst_cum_loss_mtm"],
+                     "max_size_x": sm["max_size_x"], "max_notional": sm["max_notional"]})
+    return pd.DataFrame(rows)
+
+
+def campaign_by_year(led: pd.DataFrame) -> pd.DataFrame:
+    """Recovery-rule ledger summed by expiry year (settled quarters)."""
+    x = led[led.status == "settled"].copy()
+    x["year"] = pd.to_datetime(x.expiry).dt.year
+    g = x.groupby("year")
+    return pd.DataFrame({
+        "quarters": g.size(),
+        "otm_quarters": g.outcome.apply(lambda v: int((v == "expired OTM").sum())),
+        "avg_normal_pnl_if_otm_usd": g.normal_pnl_if_otm_usd.mean(),
+        "pnl_otm_quarters_usd": g.apply(lambda d: d.loc[d.outcome == "expired OTM", "pnl_usd"].sum(), include_groups=False),
+        "pnl_other_usd": g.apply(lambda d: d.loc[d.outcome != "expired OTM", "pnl_usd"].sum(), include_groups=False),
+        "worst_cum_loss_usd": g.cum_loss_usd.min(),
+        "worst_cum_loss_any_day_usd": g.worst_cum_loss_in_quarter_usd.min(),
+        "max_notional_usd": g.notional_usd.max(),
+        "total_pnl_end_usd": g.total_pnl_usd.last(),
+    }).round(0)

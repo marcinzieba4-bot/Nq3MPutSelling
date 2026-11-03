@@ -92,19 +92,22 @@ def main() -> None:
     snap = A.live_snapshot(ctx)
     (RES / "live_snapshot.json").write_text(json.dumps(snap, indent=2, default=float))
 
-    print("8/8 start 2008 with a 50% drawdown limit (USD ledger)")
-    usd = A.usd_scenario(df, vp, mp)
-    usd["ledger"].to_csv(RES / "usd_ledger_2008_dd50_recover.csv", index=False)
-    usd["ledger_fixed"].to_csv(RES / "usd_ledger_2008_dd50_fixed.csv", index=False)
-    usd["by_year"].to_csv(RES / "usd_ledger_2008_dd50_by_year.csv")
-    usd["calendars"].round(2).to_csv(RES / "usd_2008_dd50_calendars.csv", index=False)
-    (RES / "usd_2008_dd50_summary.json").write_text(json.dumps(
-        {"recover_dd50": usd["summary"], "fixed_dd50": usd["summary_fixed"], "recover_no_limit": usd["summary_no_limit"]},
-        indent=2, default=float))
+    print("8/8 start 2008, recover every loss in one quarter ($100k base, USD)")
+    camp = A.recovery_campaigns(df, vp, mp)
+    camp_fx = A.recovery_campaigns(df, vp, mp, sizing=A.FIXED)
+    camp["fixed_summary"] = camp_fx["summary"]
+    camp["calendars"] = A.campaigns_by_calendar(df, vp, mp)
+    camp["by_year"] = A.campaign_by_year(camp["ledger"])
+    camp["ledger"].to_csv(RES / "recovery_2008_ledger.csv", index=False)
+    camp["campaigns"].to_csv(RES / "recovery_2008_campaigns.csv", index=False)
+    camp["by_year"].to_csv(RES / "recovery_2008_by_year.csv")
+    camp["calendars"].to_csv(RES / "recovery_2008_calendars.csv", index=False)
+    (RES / "recovery_2008_summary.json").write_text(json.dumps(
+        {"recover": camp["summary"], "fixed": camp_fx["summary"]}, indent=2, default=float))
 
     if not args.no_report:
         from nqput import report
-        report.build(ROOT, df, ctx, runs, grid, grid01, pt, sy, sens, lad, cal, cal_runs, pao, snap, usd)
+        report.build(ROOT, df, ctx, runs, grid, grid01, pt, sy, sens, lad, cal, cal_runs, pao, snap, camp)
     print(f"done in {time.time() - t0:.0f}s")
 
 
