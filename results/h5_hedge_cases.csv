@@ -1,0 +1,6 @@
+case,quarters,naked_pnl_usd,hedged_pnl_usd,hedge_effect_usd,avg_effect_usd,worst_effect_usd,best_effect_usd
+hedge never switched on,46,191461,191461,0,0.0,0,0
+fell through the trigger and stayed down,11,-94533,-43285,51248,4659.0,-3220,18344
+"fell through the trigger, recovered part of the way",7,15560,-19864,-35424,-5061.0,-6955,-3374
+"fell through the trigger, then rebounded above the strike",10,39275,-32037,-71312,-7131.0,-9640,-5511
+all quarters,74,151763,96275,-55488,-750.0,-9640,18344

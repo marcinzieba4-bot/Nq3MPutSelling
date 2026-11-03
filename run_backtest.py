@@ -114,6 +114,19 @@ def main() -> None:
     cv["robust"] = A.campaign_variant_robustness(df, vp, mp)
     cv["robust"].round(2).to_csv(RES / "recovery_variants_robustness.csv", index=False)
     camp["variants"] = cv
+    # inside the -5% hedge kept to expiry: rebound effect, P&L breakdown, recovery vs fixed at equal risk
+    h5 = A.hedge_rebound_analysis(df, vp, mp, A.H5_LATCH)
+    h5["quarters"].to_csv(RES / "h5_hedge_quarters.csv", index=False)
+    h5["summary"].to_csv(RES / "h5_hedge_cases.csv", index=False)
+    h5_rec = cv["variants"]["naked_h5_latch"]["recover"]["ledger"]
+    h5_fix = cv["variants"]["naked_h5_latch"]["fixed"]["ledger"]
+    h5["breakdown_recover"] = A.pnl_breakdown(h5_rec)
+    h5["breakdown_fixed"] = A.pnl_breakdown(h5_fix)
+    h5["breakdown_recover"].to_csv(RES / "h5_pnl_breakdown_recover.csv")
+    h5["breakdown_fixed"].to_csv(RES / "h5_pnl_breakdown_fixed.csv")
+    h5["equal_risk"] = A.equal_risk_comparison(df, vp, mp)
+    h5["equal_risk"].round(2).to_csv(RES / "h5_equal_risk.csv", index=False)
+    camp["h5"] = h5
 
     if not args.no_report:
         from nqput import report

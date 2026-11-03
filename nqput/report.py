@@ -484,6 +484,73 @@ def _variant_section(cv: dict) -> list[str]:
     return L
 
 
+def _h5_section(h5: dict) -> list[str]:
+    q, cases = h5["quarters"], h5["summary"].set_index("case")
+    br, bf, er = h5["breakdown_recover"], h5["breakdown_fixed"], h5["equal_risk"]
+    trig = q[q.case.str.startswith("fell")]
+    reb = q[q.case.str.contains("rebounded")]
+    worst_reb = reb.loc[reb.hedge_effect_usd.idxmin()]
+    settled = q[q.case != "open quarter"]
+    L: list[str] = []
+    w = L.append
+    w("### 9.2 Inside \"hedge from -5% until expiry\"\n")
+    w("**How it works.** Nothing happens until NQ closes 5% below the put's strike. That day the position sells NQ futures "
+      "equal to the put's delta, which makes it delta-neutral. Every day until expiry the hedge is re-sized to the put's "
+      "delta: if NQ keeps falling, more futures are sold (up to about one future per put when deep in the money); if NQ "
+      "rises, futures are bought back. The position is never net short. At expiry the futures and the put settle "
+      "together.\n")
+    w(f"**Did the rebound effect happen? Yes.** Per $100k of notional at fixed size (no recovery sizing), "
+      f"{len(trig)} of {len(settled)} quarters since 2008 switched the hedge on:\n")
+    c = h5["summary"].copy()
+    c.columns = ["What NQ did after the trigger", "Quarters", "Naked put P&L", "With the hedge", "Hedge effect",
+                 "Average effect", "Worst effect", "Best effect"]
+    w(_md_table(c, {k: _usd for k in c.columns[2:]} | {"Quarters": lambda v: f"{int(v)}"}) + "\n")
+    w(f"* In all {len(reb)} quarters where NQ fell through -5% and then finished above the strike, the naked put would "
+      f"have kept its whole premium, but the hedged version lost money: the futures sold on the way down were bought back "
+      f"higher on the way up. Cost {_usd(cases.loc['fell through the trigger, then rebounded above the strike', 'hedge_effect_usd'])} "
+      f"in total. The strongest rebound was {worst_reb.entry} to {worst_reb.expiry}: NQ fell {abs(worst_reb.low_vs_strike_pct):.1f}% "
+      f"below the strike, then rose {worst_reb.rebound_from_low_pct:.1f}% from the low; the hedge (up to "
+      f"{_usd(worst_reb.max_short_futures_usd)} of futures) lost {_usd(worst_reb.hedge_pnl_usd)}.")
+    w("* The damage stays limited because the hedge shrinks as NQ rises: by the time NQ is back above the strike the "
+      "put's delta is small and so is the short. The loss is the round trip (sell low, buy back high), not an open "
+      "short position into a rally.")
+    w(f"* When NQ kept falling, the hedge paid: {_usd(cases.loc['fell through the trigger and stayed down', 'hedge_effect_usd'])} "
+      f"over {int(cases.loc['fell through the trigger and stayed down', 'quarters'])} quarters, the best "
+      f"{_usd(cases.loc['fell through the trigger and stayed down', 'best_effect_usd'])} in a single quarter.")
+    w(f"* Net, the hedge cost {_usd(cases.loc['all quarters', 'hedge_effect_usd'])} per $100k since 2008. That is the "
+      f"price of the protection. Every hedged quarter ended between {_usd(trig.hedged_pnl_usd.min())} and "
+      f"{_usd(trig.hedged_pnl_usd.max())}, so the worst quarter improved from {_usd(settled.naked_pnl_usd.min())} to "
+      f"{_usd(settled.hedged_pnl_usd.min())}.\n")
+    w("**Why it looks so good with the recovery rule.** The hedge turns rare big losses into frequent small ones. Small "
+      "losses need only a modest size increase to win back, so the recovery rule rarely escalates. The trade-off is "
+      "that about one quarter in three becomes a small loss.\n")
+    t = pd.DataFrame([{"Sizing": "Recovery rule", **br.loc["total"].to_dict()},
+                      {"Sizing": "Fixed size", **bf.loc["total"].to_dict()}])
+    t = t[["Sizing", "premium_usd", "payout_usd", "hedge_pnl_usd", "hedge_cost_usd", "pnl_usd", "worst_cum_loss_any_day_usd",
+           "max_size_x"]]
+    t.columns = ["From 2008, $100k base", "Premiums kept", "Put payouts", "Hedge P&L", "Hedge trading costs", "Total P&L",
+                 "Worst day", "Biggest size"]
+    w("**Overall profitability** (USD, Mar/Jun/Sep/Dec calendar; premiums are net of option trading costs):\n")
+    w(_md_table(t, {k: _usd for k in t.columns[1:7]} | {"Biggest size": lambda v: f"{v:.1f}x"}) + "\n")
+    yb = br.drop(index="total").reset_index()
+    yb.columns = ["Year", "Premiums kept", "Put payouts", "Hedge P&L", "Hedge costs", "P&L", "Worst day", "Biggest size"]
+    w("By year, recovery rule:\n")
+    w(_md_table(yb, {k: _usd for k in yb.columns[1:7]} | {"Year": lambda v: f"{int(v)}", "Biggest size": lambda v: f"{v:.1f}x"}) + "\n")
+    e = er[["test", "recovery_pnl_per_year", "recovery_worst_day", "recovery_capital_needed", "fixed_multiple_same_worst_day",
+            "fixed_same_risk_pnl_per_year", "fixed_same_risk_capital"]].copy()
+    e.columns = ["Test", "Recovery rule: per year", "Worst day", "Capital needed", "Fixed size with the same worst day",
+                 "Fixed: per year", "Fixed: capital needed"]
+    wins = int((er.fixed_same_risk_pnl_per_year > er.recovery_pnl_per_year).sum())
+    w("**Does the recovery rule add anything?** Compare it with simply trading a bigger fixed size that has the same worst "
+      "day:\n")
+    w(_md_table(e, {"Recovery rule: per year": _usd, "Worst day": _usd, "Capital needed": _usd,
+                    "Fixed size with the same worst day": lambda v: f"{v:.2f}x", "Fixed: per year": _usd,
+                    "Fixed: capital needed": _usd}) + "\n")
+    w(f"At the same worst-day loss, the bigger fixed size earned more in {wins} of {len(er)} tests and always needed less "
+      "capital. The value is in the hedge; the recovery sizing mostly adds calendar luck.\n")
+    return L
+
+
 def _markdown(df, ctx, runs, grid, grid01, pt, sy, sens, lad, cal, pao, snap, camp) -> str:
     mp = ctx.mp
     settled = pt[pt.status == "settled"]
@@ -755,6 +822,7 @@ def _markdown(df, ctx, runs, grid, grid01, pt, sy, sens, lad, cal, pao, snap, ca
 
     L.extend(_campaign_section(camp))
     L.extend(_variant_section(camp["variants"]))
+    L.extend(_h5_section(camp["h5"]))
     w("## 10. Limitations\n")
     w("* Premiums are reconstructed from VXN/VIX, not traded quotes. Error is probably ±10% of premium, and larger before 2001 "
       "(VXN proxy) and before 1990 (VXO-based). NQ options did not exist before ~1999-2000; earlier years are a "

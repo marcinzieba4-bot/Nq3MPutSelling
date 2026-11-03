@@ -394,6 +394,71 @@ Same rule, same $100k base and start. Variants: the naked put; the put spread (s
 * **Hedges that switch off when NQ bounces back were unstable:** from 2008 the worst day was -$28,573 to -$62,275 (below -2.5%) and -$40,602 to -$95,288 (below -5%), and from 1990 down to -$365,730. In choppy markets (early 2009) the hedge goes on low and comes off high, and each of those losses raises the next recovery size.
 * With unlimited sizing, every variant still has a worst case far above its normal quarterly income. Fixed size keeps all the holes small.
 
+### 9.2 Inside "hedge from -5% until expiry"
+
+**How it works.** Nothing happens until NQ closes 5% below the put's strike. That day the position sells NQ futures equal to the put's delta, which makes it delta-neutral. Every day until expiry the hedge is re-sized to the put's delta: if NQ keeps falling, more futures are sold (up to about one future per put when deep in the money); if NQ rises, futures are bought back. The position is never net short. At expiry the futures and the put settle together.
+
+**Did the rebound effect happen? Yes.** Per $100k of notional at fixed size (no recovery sizing), 28 of 74 quarters since 2008 switched the hedge on:
+
+| What NQ did after the trigger | Quarters | Naked put P&L | With the hedge | Hedge effect | Average effect | Worst effect | Best effect |
+|---|---|---|---|---|---|---|---|
+| hedge never switched on | 46 | $191,461 | $191,461 | $0 | $0 | $0 | $0 |
+| fell through the trigger and stayed down | 11 | -$94,533 | -$43,285 | $51,248 | $4,659 | -$3,220 | $18,344 |
+| fell through the trigger, recovered part of the way | 7 | $15,560 | -$19,864 | -$35,424 | -$5,061 | -$6,955 | -$3,374 |
+| fell through the trigger, then rebounded above the strike | 10 | $39,275 | -$32,037 | -$71,312 | -$7,131 | -$9,640 | -$5,511 |
+| all quarters | 74 | $151,763 | $96,275 | -$55,488 | -$750 | -$9,640 | $18,344 |
+
+* In all 10 quarters where NQ fell through -5% and then finished above the strike, the naked put would have kept its whole premium, but the hedged version lost money: the futures sold on the way down were bought back higher on the way up. Cost -$71,312 in total. The strongest rebound was 2025-03-21 to 2025-06-20: NQ fell 13.6% below the strike, then rose 25.7% from the low; the hedge (up to $87,334 of futures) lost -$9,614.
+* The damage stays limited because the hedge shrinks as NQ rises: by the time NQ is back above the strike the put's delta is small and so is the short. The loss is the round trip (sell low, buy back high), not an open short position into a rally.
+* When NQ kept falling, the hedge paid: $51,248 over 11 quarters, the best $18,344 in a single quarter.
+* Net, the hedge cost -$55,488 per $100k since 2008. That is the price of the protection. Every hedged quarter ended between -$8,208 and -$1,142, so the worst quarter improved from -$24,952 to -$8,208.
+
+**Why it looks so good with the recovery rule.** The hedge turns rare big losses into frequent small ones. Small losses need only a modest size increase to win back, so the recovery rule rarely escalates. The trade-off is that about one quarter in three becomes a small loss.
+
+**Overall profitability** (USD, Mar/Jun/Sep/Dec calendar; premiums are net of option trading costs):
+
+| From 2008, $100k base | Premiums kept | Put payouts | Hedge P&L | Hedge trading costs | Total P&L | Worst day | Biggest size |
+|---|---|---|---|---|---|---|---|
+| Recovery rule | $487,321 | -$220,656 | -$78,347 | -$872 | $187,441 | -$22,614 | 6.7x |
+| Fixed size | $311,992 | -$160,224 | -$54,852 | -$637 | $96,275 | -$12,934 | 1.0x |
+
+By year, recovery rule:
+
+| Year | Premiums kept | Put payouts | Hedge P&L | Hedge costs | P&L | Worst day | Biggest size |
+|---|---|---|---|---|---|---|---|
+| 2008 | $18,197 | -$55,913 | $30,173 | -$53 | -$7,597 | -$13,330 | 1.5x |
+| 2009 | $56,056 | -$6,163 | -$18,558 | -$78 | $31,257 | -$22,319 | 3.1x |
+| 2010 | $29,211 | -$847 | -$19,773 | -$74 | $8,519 | -$12,762 | 3.0x |
+| 2011 | $21,622 | -$5,786 | -$15,659 | -$104 | $71 | -$11,349 | 1.7x |
+| 2012 | $24,803 | -$11,820 | -$861 | -$21 | $12,102 | -$8,110 | 2.5x |
+| 2013 | $15,531 | $0 | $0 | $0 | $15,531 | -$6,867 | 2.2x |
+| 2014 | $12,740 | $0 | -$11,626 | -$54 | $1,060 | -$4,284 | 2.1x |
+| 2015 | $21,158 | -$4,035 | -$16,887 | -$64 | $170 | -$11,607 | 2.2x |
+| 2016 | $44,825 | -$12,424 | -$16,496 | -$68 | $15,836 | -$22,614 | 6.7x |
+| 2017 | $10,131 | $0 | $0 | $0 | $10,131 | -$1,666 | 1.0x |
+| 2018 | $16,589 | -$20,000 | $3,730 | -$54 | $266 | -$11,777 | 2.5x |
+| 2019 | $20,164 | $0 | $0 | $0 | $20,164 | -$8,060 | 2.0x |
+| 2020 | $36,509 | -$19,577 | $8,595 | -$13 | $25,513 | -$8,378 | 1.7x |
+| 2021 | $20,239 | $0 | -$6,649 | -$27 | $13,562 | -$3,419 | 1.0x |
+| 2022 | $48,686 | -$65,478 | $23,283 | -$101 | $6,390 | -$16,444 | 3.4x |
+| 2023 | $26,657 | -$312 | -$17,108 | -$61 | $9,176 | -$7,130 | 2.1x |
+| 2024 | $20,231 | -$666 | -$6,088 | -$31 | $13,446 | -$4,782 | 1.9x |
+| 2025 | $26,928 | -$8,024 | -$11,070 | -$48 | $7,786 | -$12,047 | 3.3x |
+| 2026 | $17,044 | -$9,611 | -$3,353 | -$21 | $4,058 | -$5,869 | 1.5x |
+
+**Does the recovery rule add anything?** Compare it with simply trading a bigger fixed size that has the same worst day:
+
+| Test | Recovery rule: per year | Worst day | Capital needed | Fixed size with the same worst day | Fixed: per year | Fixed: capital needed |
+|---|---|---|---|---|---|---|
+| from 2008, Mar/Jun/Sep/Dec | $10,134 | -$22,614 | $87,752 | 1.75x | $9,100 | $40,098 |
+| from 1990, Mar/Jun/Sep/Dec | $9,305 | -$57,608 | $98,481 | 2.41x | $9,665 | $81,726 |
+| from 2008, Jan/Apr/Jul/Oct | $8,970 | -$38,322 | $90,093 | 1.83x | $7,359 | $56,651 |
+| from 1990, Jan/Apr/Jul/Oct | $8,807 | -$126,241 | $278,829 | 4.47x | $14,647 | $170,893 |
+| from 2008, Feb/May/Aug/Nov | $9,704 | -$39,035 | $104,241 | 2.78x | $14,275 | $66,796 |
+| from 1990, Feb/May/Aug/Nov | $8,907 | -$130,863 | $310,413 | 4.40x | $18,638 | $174,855 |
+
+At the same worst-day loss, the bigger fixed size earned more in 4 of 6 tests and always needed less capital. The value is in the hedge; the recovery sizing mostly adds calendar luck.
+
 ## 10. Limitations
 
 * Premiums are reconstructed from VXN/VIX, not traded quotes. Error is probably ±10% of premium, and larger before 2001 (VXN proxy) and before 1990 (VXO-based). NQ options did not exist before ~1999-2000; earlier years are a hypothetical on the index.

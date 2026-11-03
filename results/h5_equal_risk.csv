@@ -1,0 +1,7 @@
+test,start_year,calendar,recovery_pnl_per_year,recovery_worst_day,recovery_capital_needed,recovery_max_size_x,fixed_pnl_per_year,fixed_worst_day,fixed_capital_needed,fixed_multiple_same_worst_day,fixed_same_risk_pnl_per_year,fixed_same_risk_capital
+"from 2008, Mar/Jun/Sep/Dec",2008,Mar/Jun/Sep/Dec,10133.69,-22614.0,87752.0,6.67,5204.97,-12934.0,22934.0,1.75,9100.46,40098.15
+"from 1990, Mar/Jun/Sep/Dec",1990,Mar/Jun/Sep/Dec,9304.85,-57608.0,98481.0,6.67,4007.26,-23886.0,33886.0,2.41,9664.67,81725.89
+"from 2008, Jan/Apr/Jul/Oct",2008,Jan/Apr/Jul/Oct,8970.45,-38322.0,90093.0,5.18,4015.24,-20908.0,30908.0,1.83,7359.49,56650.87
+"from 1990, Jan/Apr/Jul/Oct",1990,Jan/Apr/Jul/Oct,8807.15,-126241.0,278829.0,15.26,3280.23,-28272.0,38272.0,4.47,14646.97,170893.31
+"from 2008, Feb/May/Aug/Nov",2008,Feb/May/Aug/Nov,9704.08,-39035.0,104241.0,6.52,5142.18,-14061.0,24061.0,2.78,14275.31,66796.18
+"from 1990, Feb/May/Aug/Nov",1990,Feb/May/Aug/Nov,8907.28,-130863.0,310413.0,17.95,4236.6,-29747.0,39747.0,4.4,18637.64,174855.0

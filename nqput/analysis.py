@@ -470,6 +470,8 @@ def recovery_campaigns(df: pd.DataFrame, vp: VolParams, mp: MarketParams, start:
             "premium_usd": round(r.premium_usd), "outcome": outcome, "pnl_usd": round(pnl),
             "cum_loss_usd": round(min(0.0, cum - hwm)), "worst_cum_loss_in_quarter_usd": round(worst_mtm),
             "total_pnl_usd": round(cum), "hedge_pnl_usd": round(hedge_pnl_usd),
+            "payout_usd": round(-r.mult * base * (u.info["payoff"] if not r.open else 0.0) / u.cycle.F0),
+            "hedge_cost_usd": round(-r.mult * base * u.info.get("hedge_cost", 0.0) / u.cycle.F0),
             "capital_needed_usd": round(need),
         })
     led = pd.DataFrame(rows)
@@ -617,4 +619,105 @@ def campaign_variant_robustness(df: pd.DataFrame, vp: VolParams, mp: MarketParam
                              "first_roll": sm["first_roll"], "total_pnl_per_year": sm["total_pnl_per_year"],
                              "worst_cum_loss": sm["worst_cum_loss"], "worst_cum_loss_mtm": sm["worst_cum_loss_mtm"],
                              "max_size_x": sm["max_size_x"], "capital_needed": sm["capital_needed"]})
+    return pd.DataFrame(rows)
+
+
+def hedge_rebound_analysis(df: pd.DataFrame, vp: VolParams, mp: MarketParams, hedge: Hedge,
+                           start: str = "2008-01-01", base: float = 100_000.0) -> dict:
+    """What a trigger hedge did, quarter by quarter, per $base of notional (no sizing), versus the naked put.
+
+    Quarters are grouped by what NQ did after falling through the trigger: stayed down, recovered part
+    of the way, or rebounded above the strike (the case where a short-futures hedge hurts)."""
+    big = replace(mp, capital=1e12, base_notional=base)
+    ctx = Context(df, vp, big)
+    rows = []
+    for a, b in zip(ctx.units(NAKED, NO_HEDGE), ctx.units(NAKED, hedge)):
+        c = a.cycle
+        if c.entry < pd.Timestamp(start):
+            continue
+        K = a.info["K1"]
+        trig = K * (1 - hedge.itm_trigger)
+        hit = c.F < trig
+        low, fT = float(c.F.min()), float(c.F[-1])
+        if not hit.any():
+            cls = "hedge never switched on"
+        elif c.open:
+            cls = "open quarter"
+        elif fT >= K:
+            cls = "fell through the trigger, then rebounded above the strike"
+        elif fT >= trig:
+            cls = "fell through the trigger, recovered part of the way"
+        else:
+            cls = "fell through the trigger and stayed down"
+        k = base / c.F0
+        rows.append({
+            "entry": c.entry.date(), "expiry": c.expiry.date(), "case": cls,
+            "first_hedge_day": str(c.dates[int(np.argmax(hit))].date()) if hit.any() else "",
+            "low_vs_strike_pct": round(100 * (low / K - 1), 2), "expiry_vs_strike_pct": round(100 * (fT / K - 1), 2),
+            "rebound_from_low_pct": round(100 * (fT / low - 1), 2),
+            "max_short_futures_usd": round(b.info["hedge_max"] * c.F0 * k),
+            "premium_usd": round(b.credit * k),
+            "payout_usd": round(-(b.info["payoff"] if not c.open else 0.0) * k),
+            "hedge_pnl_usd": round(b.info["hedge_pnl"] * k), "hedge_cost_usd": round(-b.info["hedge_cost"] * k),
+            "hedged_pnl_usd": round(b.ret.sum() * base), "naked_pnl_usd": round(a.ret.sum() * base),
+        })
+    q = pd.DataFrame(rows)
+    q["hedge_effect_usd"] = q.hedged_pnl_usd - q.naked_pnl_usd
+    settled = q[q.case != "open quarter"]
+    order = ["hedge never switched on", "fell through the trigger and stayed down",
+             "fell through the trigger, recovered part of the way",
+             "fell through the trigger, then rebounded above the strike"]
+    g = settled.groupby("case")
+    summary = pd.DataFrame({
+        "quarters": g.size(), "naked_pnl_usd": g.naked_pnl_usd.sum(), "hedged_pnl_usd": g.hedged_pnl_usd.sum(),
+        "hedge_effect_usd": g.hedge_effect_usd.sum(), "avg_effect_usd": g.hedge_effect_usd.mean().round(0),
+        "worst_effect_usd": g.hedge_effect_usd.min(), "best_effect_usd": g.hedge_effect_usd.max(),
+    }).reindex(order).reset_index()
+    tot = {"case": "all quarters", "quarters": len(settled), "naked_pnl_usd": settled.naked_pnl_usd.sum(),
+           "hedged_pnl_usd": settled.hedged_pnl_usd.sum(), "hedge_effect_usd": settled.hedge_effect_usd.sum(),
+           "avg_effect_usd": round(settled.hedge_effect_usd.mean()), "worst_effect_usd": settled.hedge_effect_usd.min(),
+           "best_effect_usd": settled.hedge_effect_usd.max()}
+    summary = pd.concat([summary, pd.DataFrame([tot])], ignore_index=True)
+    return {"quarters": q, "summary": summary}
+
+
+def pnl_breakdown(led: pd.DataFrame) -> pd.DataFrame:
+    """Premium kept, put payouts, hedge P&L and hedge costs by expiry year (settled quarters)."""
+    x = led[led.status == "settled"].copy()
+    x["year"] = pd.to_datetime(x.expiry).dt.year
+    g = x.groupby("year")
+    out = pd.DataFrame({
+        "premium_usd": g.premium_usd.sum(), "payout_usd": g.payout_usd.sum(), "hedge_pnl_usd": g.hedge_pnl_usd.sum(),
+        "hedge_cost_usd": g.hedge_cost_usd.sum(), "pnl_usd": g.pnl_usd.sum(),
+        "worst_cum_loss_any_day_usd": g.worst_cum_loss_in_quarter_usd.min(), "max_size_x": g.size_x.max(),
+    })
+    tot = out.sum(numeric_only=True)
+    tot["worst_cum_loss_any_day_usd"] = out.worst_cum_loss_any_day_usd.min()
+    tot["max_size_x"] = out.max_size_x.max()
+    out.loc["total"] = tot
+    return out
+
+
+H5_LATCH = Hedge("hedge from -5% to expiry", "itm_latch", itm_trigger=0.05)
+
+
+def equal_risk_comparison(df: pd.DataFrame, vp: VolParams, mp: MarketParams, hedge: Hedge = H5_LATCH,
+                          structure: Structure = NAKED, starts=("2008-01-01", "1990-01-01"),
+                          base: float = 100_000.0) -> pd.DataFrame:
+    """Recovery rule versus a larger FIXED size scaled to the same worst day, on every calendar and start."""
+    big = replace(mp, capital=1e12, base_notional=base)
+    rows = []
+    for cname, (months, cstart) in CALENDARS.items():
+        ctx = Context(df, vp, big, months, cstart)
+        for st_ in starts:
+            r = recovery_campaigns(df, vp, mp, st_, base, sizing=RECOVER, structure=structure, hedge=hedge, ctx=ctx)["summary"]
+            f = recovery_campaigns(df, vp, mp, st_, base, sizing=FIXED, structure=structure, hedge=hedge, ctx=ctx)["summary"]
+            k = r["worst_cum_loss_mtm"] / f["worst_cum_loss_mtm"]
+            rows.append({"test": f"from {st_[:4]}, {cname}", "start_year": int(st_[:4]), "calendar": cname,
+                         "recovery_pnl_per_year": r["total_pnl_per_year"], "recovery_worst_day": r["worst_cum_loss_mtm"],
+                         "recovery_capital_needed": r["capital_needed"], "recovery_max_size_x": r["max_size_x"],
+                         "fixed_pnl_per_year": f["total_pnl_per_year"], "fixed_worst_day": f["worst_cum_loss_mtm"],
+                         "fixed_capital_needed": f["capital_needed"],
+                         "fixed_multiple_same_worst_day": k, "fixed_same_risk_pnl_per_year": k * f["total_pnl_per_year"],
+                         "fixed_same_risk_capital": k * f["capital_needed"]})
     return pd.DataFrame(rows)

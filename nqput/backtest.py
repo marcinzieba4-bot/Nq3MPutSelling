@@ -233,6 +233,7 @@ def unit_cycle(c: Cycle, st: Structure, hd: Hedge, mp: MarketParams, vp: VolPara
         "payoff": -mtm[-1] if not c.open else np.nan,
         "hedge_pnl": hedge_pnl.sum(), "hedge_cost": hedge_cost.sum(),
         "hedge_trades": trades.sum(), "pnl_pts": pnl.sum(),
+        "hedge_max": float(np.abs(h).max()) if n else 0.0, "hedge_days": int((h != 0).sum()),
         "entry_delta": dport[0],
     })
     return UnitCycle(c, pnl / F0, credit, info, margin_frac=margin_frac, premium_frac=credit / F0)

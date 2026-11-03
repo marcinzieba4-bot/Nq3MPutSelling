@@ -56,6 +56,10 @@ Every quarter sells ATM puts on $100k of NQ notional from 2008-03-20; profits ar
 
 Robustness across all roll calendars and a 1990 start: [`results/recovery_variants_robustness.csv`](results/recovery_variants_robustness.csv). Premiums are estimated per quarter from that day's implied volatility (not fixed, not traded quotes).
 
+### Inside "hedge from -5% until expiry"
+
+Once NQ closes 5% below the strike, the put is delta-hedged with NQ futures every day until expiry (more futures if NQ keeps falling, bought back as it rises; never net short). Per $100k at fixed size since 2008: in the 10 quarters where NQ then rebounded above the strike, the hedge cost -$71,312 (sell low, buy back high); in the 11 quarters where NQ stayed down it saved $51,248; net -$55,488, the price of the protection. At the same worst-day loss, a bigger fixed size beat the recovery rule in 4 of 6 tests ([`results/h5_equal_risk.csv`](results/h5_equal_risk.csv)); report section 9.2 has the full breakdown.
+
 ## Run it
 
 ```bash
