@@ -749,3 +749,68 @@ def calmar_by_test(df: pd.DataFrame, vp: VolParams, mp: MarketParams, base: floa
                                  "pnl_per_year": sm["total_pnl"] / ((pd.Timestamp(sm["last_expiry"]) - pd.Timestamp(sm["first_roll"])).days / 365.25),
                                  "max_drawdown": sm["max_drawdown"], "calmar": sm["calmar"]})
     return pd.DataFrame(rows)
+
+
+# ----------------------------------------------------------------------------- reinvesting after successful series
+def run_reinvest(units: list[UnitCycle], recover: bool, capital: float, base_frac: float, reinvest: bool) -> dict:
+    """Account-level simulation. Base notional = base_frac x account; with `reinvest` the base is reset to
+    base_frac x equity whenever a quarter ends at a new equity high (a series fully won back), and stays
+    fixed during a losing series. Margin (u.margin_frac of notional) caps the size; equity <= 0 is ruin."""
+    E = hwm = capital
+    base = base_frac * capital
+    pieces, rows, ruined = [], [], None
+    for u in units:
+        c = u.cycle
+        at_high = E >= hwm - 1e-6
+        if reinvest and at_high:
+            base = base_frac * E
+        deficit = max(0.0, hwm - E)
+        m = 1.0 + deficit / (base * max(u.premium_frac, 1e-4)) if recover else 1.0
+        m = max(0.0, min(m, E / (base * u.margin_frac) if E > 0 else 0.0))
+        eq = E + np.cumsum(m * base * u.ret)
+        if (eq <= 0).any():
+            k = int(np.argmax(eq <= 0))
+            eq, ruined = eq[: k + 1], c.dates[k]
+        pieces.append(pd.Series(eq, index=c.dates[: len(eq)]))
+        rows.append({"entry": c.entry, "expiry": c.expiry, "open": c.open, "base": base, "mult": m,
+                     "notional": m * base, "equity": eq[-1]})
+        E = eq[-1]
+        if not c.open:
+            hwm = max(hwm, E)
+        if ruined is not None:
+            break
+    daily = pd.concat(pieces).groupby(level=0).last()
+    cyc = pd.DataFrame(rows)
+    last = cyc.loc[~cyc.open, "expiry"].max() if ruined is None else ruined
+    d = daily[daily.index <= last]
+    yrs = (d.index[-1] - d.index[0]).days / 365.25
+    final = float(d.iloc[-1])
+    cagr = (final / capital) ** (1 / yrs) - 1 if final > 0 else -1.0
+    dd_pct = float(((d.cummax() - d) / d.cummax()).max())
+    dd_usd = float((d.cummax() - d).max())
+    return {"final_equity": final, "cagr": cagr, "max_dd_pct": dd_pct, "max_dd_usd": dd_usd,
+            "calmar": cagr / dd_pct if dd_pct > 0 else np.nan,
+            "simple_return": (final - capital) / capital / yrs, "dollar_calmar": (final - capital) / yrs / dd_usd,
+            "max_notional": float(cyc.notional.max()), "max_mult": float(cyc.mult.max()),
+            "final_base": float(cyc.base.iloc[-1]), "ruined": str(ruined.date()) if ruined is not None else "",
+            "years": yrs, "daily": d, "cycles": cyc}
+
+
+def reinvest_study(df: pd.DataFrame, vp: VolParams, mp: MarketParams, capital: float = 100_000.0,
+                   base_fracs=(0.5, 1.0, 1.5, 2.0), starts=("2008-01-01", "1990-01-01")) -> pd.DataFrame:
+    """Calmar with and without reinvesting, for the naked put and the -5% hedge, recovery rule and fixed size."""
+    rows = []
+    for cname, (months, cstart) in CALENDARS.items():
+        ctx = Context(df, vp, replace(mp, capital=capital, base_notional=capital), months, cstart)
+        for vname, hd in [("Naked ATM put", NO_HEDGE), ("Hedge from -5% to expiry", H5_LATCH)]:
+            units_all = ctx.units(NAKED, hd)
+            for st_ in starts:
+                units = [u for u in units_all if u.cycle.entry >= pd.Timestamp(st_)]
+                for recover in (True, False):
+                    for bf in base_fracs:
+                        for reinvest in (False, True):
+                            r = run_reinvest(units, recover, capital, bf, reinvest)
+                            rows.append({"variant": vname, "sizing": "Recovery rule" if recover else "Fixed size",
+                                         "start_year": int(st_[:4]), "calendar": cname, "base_x_account": bf,
+                                         "reinvest": reinvest, **{k: v for k, v in r.items() if k not in ("daily", "cycles")}})
+    return pd.DataFrame(rows)

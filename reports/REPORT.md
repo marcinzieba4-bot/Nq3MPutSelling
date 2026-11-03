@@ -470,6 +470,22 @@ At the same worst-day loss, the bigger fixed size earned more in 4 of 6 tests an
 
 From 2008 on the Mar/Jun/Sep/Dec calendar the hedge scores 0.42 with the recovery rule ($10,134 a year over a -$24,193 drawdown) and 0.40 at fixed size. That is the best of the six tests; including the dot-com bust (from 1990) it drops to 0.06-0.16.
 
+### 9.3 Reinvesting after each successful series
+
+Account of $100k, base trade = puts on 1x the account. With reinvesting, every time a quarter ends at a new account high (a losing series fully won back) the base is reset to 1x the new account value; during a losing series it stays fixed. Calmar here is the standard one: compound annual growth (CAGR) divided by the largest drawdown as a % of the account's peak. (Without reinvesting this differs from the dollar Calmar above, which uses the average yearly profit on the starting account.)
+
+| Sizing | Reinvest | End value of $100k (2008) | CAGR (2008) | Max drawdown (2008) | Calmar (2008) | Calmar, median of 6 tests | Worst drawdown, 6 tests |
+|---|---|---|---|---|---|---|---|
+| Recovery rule | no | $287,315 | 5.9% | 21.3% | 0.28 | 0.14 | 60.8% |
+| Recovery rule | yes | $622,000 | 10.4% | 23.8% | 0.44 | 0.20 | 85.4% |
+| Fixed size | no | $196,177 | 3.7% | 12.4% | 0.30 | 0.17 | 21.4% |
+| Fixed size | yes | $256,653 | 5.2% | 13.0% | 0.40 | 0.17 | 34.0% |
+
+* From 2008 reinvesting lifts Calmar because CAGR rises while the worst drawdown barely changes: that drawdown came in 2008-09, before there was anything to reinvest.
+* From 1990 the dot-com crash arrives after ten years of compounding, so the drawdown grows with the account: with the recovery rule the worst drawdown goes from 28.6%-60.8% to 58.3%-85.4%, while Calmar moves only from 0.07-0.14 to 0.09-0.16.
+* At fixed size, reinvesting leaves the median Calmar unchanged; the drawdowns grow in proportion to the growth.
+* Full grid (leverage 0.5x-2x, naked put too): [`results/reinvest_study.csv`](../results/reinvest_study.csv).
+
 ## 10. Limitations
 
 * Premiums are reconstructed from VXN/VIX, not traded quotes. Error is probably ±10% of premium, and larger before 2001 (VXN proxy) and before 1990 (VXO-based). NQ options did not exist before ~1999-2000; earlier years are a hypothetical on the index.

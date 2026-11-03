@@ -571,6 +571,47 @@ def _h5_section(h5: dict) -> list[str]:
       f"That is the best of the six tests; including the dot-com bust (from 1990) it drops to "
       f"{cm[(cm.variant == 'Hedge from -5% to expiry') & (cm.start_year == 1990)].calmar.min():.2f}-"
       f"{cm[(cm.variant == 'Hedge from -5% to expiry') & (cm.start_year == 1990)].calmar.max():.2f}.\n")
+    L.extend(_reinvest_section(h5["reinvest"]))
+    return L
+
+
+def _reinvest_section(rs: pd.DataFrame) -> list[str]:
+    L: list[str] = []
+    w = L.append
+    h = rs[(rs.variant == "Hedge from -5% to expiry") & (rs.base_x_account == 1.0)].copy()
+    h["test"] = h.start_year.astype(str) + " " + h.calendar.str[:3]
+    w("### 9.3 Reinvesting after each successful series\n")
+    w("Account of $100k, base trade = puts on 1x the account. With reinvesting, every time a quarter ends at a new "
+      "account high (a losing series fully won back) the base is reset to 1x the new account value; during a losing "
+      "series it stays fixed. Calmar here is the standard one: compound annual growth (CAGR) divided by the largest "
+      "drawdown as a % of the account's peak. (Without reinvesting this differs from the dollar Calmar above, which "
+      "uses the average yearly profit on the starting account.)\n")
+    rows = []
+    for z in ("Recovery rule", "Fixed size"):
+        for rv in (False, True):
+            x = h[(h.sizing == z) & (h.reinvest == rv)].set_index("test")
+            m = x.loc["2008 Mar"]
+            rows.append({"Sizing": z, "Reinvest": "yes" if rv else "no",
+                         "End value of $100k (2008)": m.final_equity, "CAGR (2008)": m.cagr, "Max drawdown (2008)": m.max_dd_pct,
+                         "Calmar (2008)": m.calmar, "Calmar, median of 6 tests": x.calmar.median(),
+                         "Worst drawdown, 6 tests": x.max_dd_pct.max()})
+    t = pd.DataFrame(rows)
+    pct = lambda v: f"{100 * v:.1f}%"
+    w(_md_table(t, {"End value of $100k (2008)": _usd, "CAGR (2008)": pct, "Max drawdown (2008)": pct,
+                    "Calmar (2008)": lambda v: f"{v:.2f}", "Calmar, median of 6 tests": lambda v: f"{v:.2f}",
+                    "Worst drawdown, 6 tests": pct}) + "\n")
+    rec = h[h.sizing == "Recovery rule"]
+    r90 = rec[(rec.start_year == 1990)]
+    w(f"* From 2008 reinvesting lifts Calmar because CAGR rises while the worst drawdown barely changes: that drawdown "
+      f"came in 2008-09, before there was anything to reinvest.")
+    w(f"* From 1990 the dot-com crash arrives after ten years of compounding, so the drawdown grows with the account: "
+      f"with the recovery rule the worst drawdown goes from {pct(r90[~r90.reinvest].max_dd_pct.min())}-"
+      f"{pct(r90[~r90.reinvest].max_dd_pct.max())} to {pct(r90[r90.reinvest].max_dd_pct.min())}-"
+      f"{pct(r90[r90.reinvest].max_dd_pct.max())}, while Calmar moves only from "
+      f"{r90[~r90.reinvest].calmar.min():.2f}-{r90[~r90.reinvest].calmar.max():.2f} to "
+      f"{r90[r90.reinvest].calmar.min():.2f}-{r90[r90.reinvest].calmar.max():.2f}.")
+    w("* At fixed size, reinvesting leaves the median Calmar unchanged; the drawdowns grow in proportion to the growth.")
+    w("* Full grid (leverage 0.5x-2x, naked put too): [`results/reinvest_study.csv`](../results/reinvest_study.csv).\n")
     return L
 
 
