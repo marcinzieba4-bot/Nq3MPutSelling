@@ -256,6 +256,37 @@ def fig_campaigns(path: Path, camp: dict):
     plt.close(fig)
 
 
+def fig_campaign_variants(path: Path, cv: dict):
+    show = [("naked", "Naked ATM put", S[0]), ("spread10", "+ long put 10% lower", S[1]),
+            ("naked_h25_latch", "+ delta hedge from -2.5% to expiry", S[6]),
+            ("naked_h5_latch", "+ delta hedge from -5% to expiry", S[2])]
+    fig, (a1, a2) = plt.subplots(2, 1, figsize=(11, 7.4), sharex=True, gridspec_kw={"height_ratios": [1.2, 1]})
+    for vid, lab, col in show:
+        run = cv["variants"][vid]["recover"]["run"]
+        pnl = (run.daily - 1e12) / 1e3
+        # loss to win back = P&L below the highest SETTLED total (as in the tables), marked daily
+        cyc = run.cycles[~run.cycles.open]
+        settled_high = pd.Series(((cyc.equity - 1e12) / 1e3).values, index=pd.to_datetime(cyc.expiry)).cummax().clip(lower=0)
+        high = settled_high.reindex(pnl.index.union(settled_high.index)).ffill().reindex(pnl.index).fillna(0)
+        dd = (pnl - high).clip(upper=0)
+        a1.plot(pnl.index, pnl.values, color=col, lw=1.6, label=lab)
+        _end_label(a1, pnl, f"${pnl.iloc[-1]:,.0f}k", col)
+        a2.plot(dd.index, dd.values, color=col, lw=1.2, label=lab)
+    kfmt = matplotlib.ticker.FuncFormatter(lambda v, _: f"-${abs(v):,.0f}k" if v < 0 else f"${v:,.0f}k")
+    for ax in (a1, a2):
+        ax.yaxis.set_major_formatter(kfmt)
+        ax.axhline(0, color=AXIS, lw=0.8)
+    a1.set_title("Recovery rule from 2008 on $100k base notional: total P&L (USD)")
+    a2.set_title("Cumulated loss to win back on any day, marked to market (USD)")
+    a1.legend(loc="upper left")
+    a2.xaxis.set_major_locator(mdates.YearLocator(2))
+    a2.xaxis.set_major_formatter(mdates.DateFormatter("%Y"))
+    a1.set_xlim(None, a1.get_xlim()[1] + 500)
+    fig.tight_layout()
+    fig.savefig(path, dpi=150)
+    plt.close(fig)
+
+
 # ----------------------------------------------------------------------------- markdown helpers
 def _md_table(df: pd.DataFrame, fmt: dict | None = None) -> str:
     fmt = fmt or {}
@@ -308,6 +339,7 @@ def build(root: Path, df, ctx, runs, grid, grid01, pt, sy, sens, lad, cal, cal_r
     fig_start_year(figs / "4_recovery_by_start_year.png", sy)
     fig_hedging(figs / "5_delta_hedging.png", runs, mp)
     fig_campaigns(figs / "6_recovery_2008.png", camp)
+    fig_campaign_variants(figs / "7_recovery_2008_variants.png", camp["variants"])
     (root / "reports" / "REPORT.md").write_text(_markdown(df, ctx, runs, grid, grid01, pt, sy, sens, lad, cal,
                                                           pao, snap, camp))
 
@@ -378,6 +410,77 @@ def _campaign_section(camp: dict) -> list[str]:
     w(_md_table(q, fq) + "\n")
     w("CSV: [`results/recovery_2008_ledger.csv`](../results/recovery_2008_ledger.csv), "
       "[`results/recovery_2008_campaigns.csv`](../results/recovery_2008_campaigns.csv).\n")
+    return L
+
+
+def _variant_section(cv: dict) -> list[str]:
+    t, rb = cv["table"].set_index("variant"), cv["robust"]
+    L: list[str] = []
+    w = L.append
+    w("### 9.1 Buying the 10% OTM put, and delta hedging after a 2.5% or 5% fall\n")
+    w("Same rule, same $100k base and start. Variants: the naked put; the put spread (sell the ATM put, buy the put 10% "
+      "below it, same expiry); and NQ futures hedges that make the position delta-neutral (rebalanced daily) once NQ "
+      "is 2.5% or 5% below the strike. *While below* removes the hedge when NQ climbs back above the trigger; "
+      "*to expiry* keeps it until expiry once triggered. For the spread, the normal P&L is the net credit: the ATM "
+      "premium minus the cost of the 10% OTM put.\n")
+    w("*Premiums are neither fixed nor traded quotes. Each quarter's premium is priced on the sale date with Black-76 "
+      "from that day's estimated implied volatility (VXN, calibrated to at-the-money levels, plus the VIX3M/VIX term "
+      "structure), so it moves with the market. The 10% OTM put adds the model's skew (about +4.6 vol points at 3 months). "
+      "Hedges trade NQ futures at modelled prices from daily Nasdaq-100 closes.*\n")
+    tab = cv["table"][["label", "normal_pnl_if_otm", "total_pnl", "total_pnl_per_year", "worst_cum_loss",
+                       "worst_cum_loss_mtm", "max_size_x", "max_notional", "capital_needed", "fixed_total_pnl",
+                       "fixed_worst_cum_loss_mtm"]].copy()
+    tab.columns = ["Variant (from 2008, Mar/Jun/Sep/Dec)", "Normal P&L if OTM", "Total P&L", "Per year",
+                   "Worst cumulated loss (expiry)", "Worst on any day", "Biggest size (x)", "Biggest notional",
+                   "Capital needed", "Fixed size: total P&L", "Fixed size: worst day"]
+    fm = {c: _usd for c in tab.columns[1:]}
+    fm["Biggest size (x)"] = lambda v: f"{v:.1f}"
+    w(_md_table(tab, fm) + "\n")
+    w("![variants](figures/7_recovery_2008_variants.png)\n")
+    piv = rb.pivot_table(index="variant", columns=["start_year", "calendar"], values="worst_cum_loss_mtm", sort=False)
+    order = [v for v in t.index]
+    rows = []
+    for v in order:
+        r = {"Variant": t.loc[v, "label"]}
+        for sy_, cal_ in [(2008, "Mar/Jun/Sep/Dec"), (2008, "Jan/Apr/Jul/Oct"), (2008, "Feb/May/Aug/Nov"),
+                          (1990, "Mar/Jun/Sep/Dec"), (1990, "Jan/Apr/Jul/Oct"), (1990, "Feb/May/Aug/Nov")]:
+            r[f"{sy_} {cal_[:3]}"] = piv.loc[v, (sy_, cal_)]
+        sub = rb[rb.variant == v]
+        r["Biggest size, any test"] = sub.max_size_x.max()
+        rows.append(r)
+    rt = pd.DataFrame(rows)
+    fr = {c: _usd for c in rt.columns if c[:4] in ("2008", "1990")}
+    fr["Biggest size, any test"] = lambda v: f"{v:.0f}x"
+    w("**Worst cumulated loss on any day, every roll calendar, starting 2008 and 1990** (USD, $100k base):\n")
+    w(_md_table(rt, fr) + "\n")
+    def rng(v, year):
+        x = rb[(rb.variant == v) & (rb.start_year == year)].worst_cum_loss_mtm
+        return f"{_usd(x.max())} to {_usd(x.min())}"
+
+    def per_year(v):
+        return _usd(t.loc[v, "total_pnl_per_year"])
+
+    sp = rb[rb.variant == "spread10"]
+    w(f"* **The 10% OTM put does not make the recovery rule safe.** It lowers the normal P&L from "
+      f"{_usd(t.loc['naked', 'normal_pnl_if_otm'])} to {_usd(t.loc['spread10', 'normal_pnl_if_otm'])} a quarter, so "
+      f"winning back a loss needs a bigger multiple: up to {t.loc['spread10', 'max_size_x']:.0f}x from 2008 and "
+      f"{sp.max_size_x.max():.0f}x in the tests from 1990. Worst day from 2008: {rng('spread10', 2008)} across the three "
+      f"calendars (naked {rng('naked', 2008)}). What it does cap is the margin: about "
+      f"{_usd(t.loc['spread10', 'capital_needed'])} of capital per $100k instead of {_usd(t.loc['naked', 'capital_needed'])}. "
+      f"At fixed size it is a clean risk cut: worst day {_usd(t.loc['spread10', 'fixed_worst_cum_loss_mtm'])} vs "
+      f"{_usd(t.loc['naked', 'fixed_worst_cum_loss_mtm'])}.")
+    w(f"* **Hedging after the fall and keeping the hedge to expiry worked best.** From -5%: worst day {rng('naked_h5_latch', 2008)} "
+      f"from 2008 and {rng('naked_h5_latch', 1990)} from 1990, for {per_year('naked_h5_latch')} a year (naked "
+      f"{per_year('naked')}). From -2.5%: {rng('naked_h25_latch', 2008)} from 2008 and {rng('naked_h25_latch', 1990)} from "
+      f"1990, but only {per_year('naked_h25_latch')} a year, because it hedges far more quarters and every hedge loss "
+      f"raises the next recovery size (up to {rb[rb.variant == 'naked_h25_latch'].max_size_x.max():.0f}x, vs "
+      f"{rb[rb.variant == 'naked_h5_latch'].max_size_x.max():.0f}x from -5%).")
+    w(f"* **Hedges that switch off when NQ bounces back were unstable:** from 2008 the worst day was "
+      f"{rng('naked_h25', 2008)} (below -2.5%) and {rng('naked_h5', 2008)} (below -5%), and from 1990 down to "
+      f"{_usd(rb[rb.variant == 'naked_h5'].worst_cum_loss_mtm.min())}. In choppy markets (early 2009) the hedge goes on low "
+      "and comes off high, and each of those losses raises the next recovery size.")
+    w("* With unlimited sizing, every variant still has a worst case far above its normal quarterly income. Fixed size "
+      "keeps all the holes small.\n")
     return L
 
 
@@ -651,6 +754,7 @@ def _markdown(df, ctx, runs, grid, grid01, pt, sy, sens, lad, cal, pao, snap, ca
       "options specifically.\n")
 
     L.extend(_campaign_section(camp))
+    L.extend(_variant_section(camp["variants"]))
     w("## 10. Limitations\n")
     w("* Premiums are reconstructed from VXN/VIX, not traded quotes. Error is probably ±10% of premium, and larger before 2001 "
       "(VXN proxy) and before 1990 (VXO-based). NQ options did not exist before ~1999-2000; earlier years are a "

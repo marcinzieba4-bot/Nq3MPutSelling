@@ -359,6 +359,41 @@ Check these against live quotes before trading. The model ignores the current sk
 
 CSV: [`results/recovery_2008_ledger.csv`](../results/recovery_2008_ledger.csv), [`results/recovery_2008_campaigns.csv`](../results/recovery_2008_campaigns.csv).
 
+### 9.1 Buying the 10% OTM put, and delta hedging after a 2.5% or 5% fall
+
+Same rule, same $100k base and start. Variants: the naked put; the put spread (sell the ATM put, buy the put 10% below it, same expiry); and NQ futures hedges that make the position delta-neutral (rebalanced daily) once NQ is 2.5% or 5% below the strike. *While below* removes the hedge when NQ climbs back above the trigger; *to expiry* keeps it until expiry once triggered. For the spread, the normal P&L is the net credit: the ATM premium minus the cost of the 10% OTM put.
+
+*Premiums are neither fixed nor traded quotes. Each quarter's premium is priced on the sale date with Black-76 from that day's estimated implied volatility (VXN, calibrated to at-the-money levels, plus the VIX3M/VIX term structure), so it moves with the market. The 10% OTM put adds the model's skew (about +4.6 vol points at 3 months). Hedges trade NQ futures at modelled prices from daily Nasdaq-100 closes.*
+
+| Variant (from 2008, Mar/Jun/Sep/Dec) | Normal P&L if OTM | Total P&L | Per year | Worst cumulated loss (expiry) | Worst on any day | Biggest size (x) | Biggest notional | Capital needed | Fixed size: total P&L | Fixed size: worst day |
+|---|---|---|---|---|---|---|---|---|---|---|
+| Naked ATM put | $4,216 | $242,680 | $13,120 | -$53,140 | -$104,425 | 7.9 | $793,846 | $183,810 | $151,765 | -$40,304 |
+| ATM put + long put 10% lower | $2,560 | $143,297 | $7,747 | -$30,756 | -$87,417 | 10.1 | $1,012,083 | $97,836 | $80,925 | -$19,622 |
+| Naked + delta hedge below -2.5% | $4,216 | $156,789 | $8,476 | -$26,235 | -$28,573 | 4.2 | $419,174 | $68,612 | $72,721 | -$15,099 |
+| Naked + delta hedge below -5% | $4,216 | $196,170 | $10,606 | -$93,927 | -$95,288 | 12.4 | $1,242,711 | $219,560 | $88,257 | -$29,455 |
+| Naked + delta hedge from -2.5% to expiry | $4,216 | $121,751 | $6,582 | -$49,858 | -$55,131 | 14.8 | $1,483,758 | $199,751 | $49,224 | -$16,531 |
+| Naked + delta hedge from -5% to expiry | $4,216 | $187,442 | $10,134 | -$20,414 | -$22,614 | 6.7 | $666,564 | $87,752 | $96,276 | -$12,934 |
+| Spread -10% + delta hedge below -5% | $2,560 | $117,066 | $6,329 | -$41,272 | -$43,925 | 12.9 | $1,294,906 | $126,037 | $57,502 | -$13,967 |
+
+![variants](figures/7_recovery_2008_variants.png)
+
+**Worst cumulated loss on any day, every roll calendar, starting 2008 and 1990** (USD, $100k base):
+
+| Variant | 2008 Mar | 2008 Jan | 2008 Feb | 1990 Mar | 1990 Jan | 1990 Feb | Biggest size, any test |
+|---|---|---|---|---|---|---|---|
+| Naked ATM put | -$104,425 | -$67,800 | -$49,473 | -$204,772 | -$410,524 | -$543,420 | 23x |
+| ATM put + long put 10% lower | -$87,417 | -$74,106 | -$47,184 | -$176,579 | -$585,040 | -$521,238 | 146x |
+| Naked + delta hedge below -2.5% | -$28,573 | -$62,275 | -$35,603 | -$133,435 | -$208,775 | -$140,682 | 20x |
+| Naked + delta hedge below -5% | -$95,288 | -$86,544 | -$40,602 | -$118,339 | -$365,730 | -$361,274 | 38x |
+| Naked + delta hedge from -2.5% to expiry | -$55,131 | -$20,639 | -$41,034 | -$121,355 | -$51,575 | -$57,016 | 33x |
+| Naked + delta hedge from -5% to expiry | -$22,614 | -$38,322 | -$39,035 | -$57,608 | -$126,241 | -$130,863 | 18x |
+| Spread -10% + delta hedge below -5% | -$43,925 | -$192,257 | -$31,747 | -$50,296 | -$378,515 | -$596,502 | 123x |
+
+* **The 10% OTM put does not make the recovery rule safe.** It lowers the normal P&L from $4,216 to $2,560 a quarter, so winning back a loss needs a bigger multiple: up to 10x from 2008 and 146x in the tests from 1990. Worst day from 2008: -$47,184 to -$87,417 across the three calendars (naked -$49,473 to -$104,425). What it does cap is the margin: about $97,836 of capital per $100k instead of $183,810. At fixed size it is a clean risk cut: worst day -$19,622 vs -$40,304.
+* **Hedging after the fall and keeping the hedge to expiry worked best.** From -5%: worst day -$22,614 to -$39,035 from 2008 and -$57,608 to -$130,863 from 1990, for $10,134 a year (naked $13,120). From -2.5%: -$20,639 to -$55,131 from 2008 and -$51,575 to -$121,355 from 1990, but only $6,582 a year, because it hedges far more quarters and every hedge loss raises the next recovery size (up to 33x, vs 18x from -5%).
+* **Hedges that switch off when NQ bounces back were unstable:** from 2008 the worst day was -$28,573 to -$62,275 (below -2.5%) and -$40,602 to -$95,288 (below -5%), and from 1990 down to -$365,730. In choppy markets (early 2009) the hedge goes on low and comes off high, and each of those losses raises the next recovery size.
+* With unlimited sizing, every variant still has a worst case far above its normal quarterly income. Fixed size keeps all the holes small.
+
 ## 10. Limitations
 
 * Premiums are reconstructed from VXN/VIX, not traded quotes. Error is probably ±10% of premium, and larger before 2001 (VXN proxy) and before 1990 (VXO-based). NQ options did not exist before ~1999-2000; earlier years are a hypothetical on the index.

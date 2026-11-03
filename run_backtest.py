@@ -104,6 +104,16 @@ def main() -> None:
     camp["calendars"].to_csv(RES / "recovery_2008_calendars.csv", index=False)
     (RES / "recovery_2008_summary.json").write_text(json.dumps(
         {"recover": camp["summary"], "fixed": camp_fx["summary"]}, indent=2, default=float))
+    # same rule with a 10% OTM long put and with delta hedges that start after a 2.5% / 5% fall
+    cv = A.campaign_variants(df, vp, mp)
+    cv["table"].round(2).to_csv(RES / "recovery_2008_variants.csv", index=False)
+    pd.concat([v["recover"]["ledger"].assign(variant=k) for k, v in cv["variants"].items()]).to_csv(
+        RES / "recovery_2008_variant_ledgers.csv", index=False)
+    pd.concat([v["recover"]["campaigns"].assign(variant=k) for k, v in cv["variants"].items()]).to_csv(
+        RES / "recovery_2008_variant_campaigns.csv", index=False)
+    cv["robust"] = A.campaign_variant_robustness(df, vp, mp)
+    cv["robust"].round(2).to_csv(RES / "recovery_variants_robustness.csv", index=False)
+    camp["variants"] = cv
 
     if not args.no_report:
         from nqput import report

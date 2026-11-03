@@ -49,7 +49,7 @@ class Structure:
 @dataclass(frozen=True)
 class Hedge:
     name: str = "no hedge"
-    mode: str = "none"                 # none | full | cap | itm
+    mode: str = "none"                 # none | full | cap | itm | itm_latch
     every: int = 1                     # rebalance every N trading days (1 = daily, 5 = weekly)
     ratio: float = 1.0                 # fraction of delta hedged (full mode)
     band: float = 0.0                  # only trade when |target - current| > band
@@ -197,6 +197,7 @@ def unit_cycle(c: Cycle, st: Structure, hd: Hedge, mp: MarketParams, vp: VolPara
     if hd.mode != "none":
         d0 = dport[0]
         cur = 0.0
+        latched = False
         # a settled cycle needs no hedge decision on expiry day; an open one keeps hedging
         for t in range(n if c.open else n - 1):
             if t % hd.every == 0:
@@ -204,8 +205,11 @@ def unit_cycle(c: Cycle, st: Structure, hd: Hedge, mp: MarketParams, vp: VolPara
                     tgt = -hd.ratio * dport[t]
                 elif hd.mode == "cap":      # never let delta grow above the entry delta
                     tgt = -max(0.0, dport[t] - d0) * hd.ratio
-                elif hd.mode == "itm":      # hedge fully only while the short put is ITM
+                elif hd.mode == "itm":      # hedge fully only while NQ is below the trigger
                     tgt = -dport[t] if c.F[t] < K1 * (1 - hd.itm_trigger) else 0.0
+                elif hd.mode == "itm_latch":  # once NQ breaks the trigger, stay delta-hedged to expiry
+                    latched = latched or c.F[t] < K1 * (1 - hd.itm_trigger)
+                    tgt = -dport[t] if latched else 0.0
                 else:
                     raise ValueError(hd.mode)
                 if abs(tgt - cur) > hd.band or tgt == 0.0:

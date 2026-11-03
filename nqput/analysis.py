@@ -423,7 +423,8 @@ def usd_scenario(df: pd.DataFrame, vp: VolParams, mp: MarketParams, start: str =
 # ----------------------------------------------------------------------------- recovery campaigns ($ base, no limit)
 def recovery_campaigns(df: pd.DataFrame, vp: VolParams, mp: MarketParams, start: str = "2008-01-01",
                        base: float = 100_000.0, months=(3, 6, 9, 12), cycle_start: str = "1986-03-01",
-                       sizing: Sizing = RECOVER) -> dict:
+                       sizing: Sizing = RECOVER, structure: Structure = NAKED, hedge: Hedge = NO_HEDGE,
+                       ctx: Context | None = None) -> dict:
     """The recovery rule with no capital or drawdown limit, from `start`, on a fixed base notional.
 
     Every quarter sells ATM puts on `base` of NQ notional. After a loss the next sale is sized so that,
@@ -432,9 +433,11 @@ def recovery_campaigns(df: pd.DataFrame, vp: VolParams, mp: MarketParams, start:
     size: the worst cumulated loss is the capital the rule needs.
     """
     big = replace(mp, capital=1e12, base_notional=base)
-    ctx = Context(df, vp, big, months, cycle_start)
-    res = ctx.run(NAKED, NO_HEDGE, sizing, start)
-    units = {u.cycle.entry: u for u in ctx.units(NAKED, NO_HEDGE)}
+    if ctx is None:
+        ctx = Context(df, vp, big, months, cycle_start)
+    res = ctx.run(structure, hedge, sizing, start)
+    units = {u.cycle.entry: u for u in ctx.units(structure, hedge)}
+    spread = structure.long_otm is not None
     C0 = big.capital
     eq = res.daily - C0                       # cumulative P&L in USD, daily marks
     rows, hwm = [], 0.0
@@ -452,6 +455,12 @@ def recovery_campaigns(df: pd.DataFrame, vp: VolParams, mp: MarketParams, start:
             outcome = "ITM, still a profit"
         else:
             outcome = "ITM, loss"
+        # capital to carry this quarter: a spread's max loss is its margin; a naked put needs ~10% of
+        # notional on top of its marked-to-market loss
+        margin = r.mult * base * u.margin_frac
+        deficit_before = r.deficit_before
+        need = deficit_before + margin if spread else -worst_mtm + margin
+        hedge_pnl_usd = r.mult * base * u.info.get("hedge_pnl", 0.0) / u.cycle.F0
         if not r.open:
             hwm = max(hwm, cum)
         rows.append({
@@ -460,7 +469,8 @@ def recovery_campaigns(df: pd.DataFrame, vp: VolParams, mp: MarketParams, start:
             "size_x": round(r.mult, 2), "notional_usd": round(r.notional),
             "premium_usd": round(r.premium_usd), "outcome": outcome, "pnl_usd": round(pnl),
             "cum_loss_usd": round(min(0.0, cum - hwm)), "worst_cum_loss_in_quarter_usd": round(worst_mtm),
-            "total_pnl_usd": round(cum),
+            "total_pnl_usd": round(cum), "hedge_pnl_usd": round(hedge_pnl_usd),
+            "capital_needed_usd": round(need),
         })
     led = pd.DataFrame(rows)
 
@@ -515,7 +525,11 @@ def recovery_campaigns(df: pd.DataFrame, vp: VolParams, mp: MarketParams, start:
         "worst_cum_loss_mtm_quarter": f"{led.entry[i_mtm]} to {led.expiry[i_mtm]}",
         "worst_quarter_loss": float(s.pnl_usd.min()),
         "max_size_x": float(s.size_x.max()), "max_notional": float(s.notional_usd.max()),
-        "campaigns": len(camp),
+        "campaigns": len(camp), "capital_needed": float(led.capital_needed_usd.max()),
+        "capital_needed_at": str(led.entry[led.capital_needed_usd.idxmax()]),
+        "hedge_pnl_total": float(s.hedge_pnl_usd.sum()),
+        "max_campaign_quarters": int(camp.loc[camp.won_back.astype(str).str[:2] == "20", "quarters"].max())
+        if len(camp) else 0,
     }
     return {"ledger": led, "campaigns": camp, "summary": summary, "run": res}
 
@@ -548,3 +562,59 @@ def campaign_by_year(led: pd.DataFrame) -> pd.DataFrame:
         "max_notional_usd": g.notional_usd.max(),
         "total_pnl_end_usd": g.total_pnl_usd.last(),
     }).round(0)
+
+
+# variants for the 2008 campaign study: (id, label, structure, hedge)
+SPREAD10 = STRUCTURES[2]
+CAMPAIGN_VARIANTS = [
+    ("naked", "Naked ATM put", NAKED, NO_HEDGE),
+    ("spread10", "ATM put + long put 10% lower", SPREAD10, NO_HEDGE),
+    ("naked_h25", "Naked + delta hedge below -2.5%", NAKED, Hedge("hedge below -2.5%", "itm", itm_trigger=0.025)),
+    ("naked_h5", "Naked + delta hedge below -5%", NAKED, Hedge("hedge below -5%", "itm", itm_trigger=0.05)),
+    ("naked_h25_latch", "Naked + delta hedge from -2.5% to expiry", NAKED,
+     Hedge("hedge from -2.5% to expiry", "itm_latch", itm_trigger=0.025)),
+    ("naked_h5_latch", "Naked + delta hedge from -5% to expiry", NAKED,
+     Hedge("hedge from -5% to expiry", "itm_latch", itm_trigger=0.05)),
+    ("spread10_h5", "Spread -10% + delta hedge below -5%", SPREAD10, Hedge("hedge below -5%", "itm", itm_trigger=0.05)),
+]
+
+
+def campaign_variants(df: pd.DataFrame, vp: VolParams, mp: MarketParams, start: str = "2008-01-01",
+                      base: float = 100_000.0) -> dict:
+    """Recovery rule and fixed size for each structure / hedge variant, same 2008 start and $100k base."""
+    big = replace(mp, capital=1e12, base_notional=base)
+    ctx = Context(df, vp, big)
+    out, rows = {}, []
+    for vid, label, st, hd in CAMPAIGN_VARIANTS:
+        rec = recovery_campaigns(df, vp, mp, start, base, sizing=RECOVER, structure=st, hedge=hd, ctx=ctx)
+        fx = recovery_campaigns(df, vp, mp, start, base, sizing=FIXED, structure=st, hedge=hd, ctx=ctx)
+        out[vid] = {"label": label, "recover": rec, "fixed": fx}
+        a, b = rec["summary"], fx["summary"]
+        rows.append({"variant": vid, "label": label,
+                     "normal_pnl_if_otm": a["base_premium_avg"], "total_pnl": a["total_pnl"],
+                     "total_pnl_per_year": a["total_pnl_per_year"], "worst_cum_loss": a["worst_cum_loss"],
+                     "worst_cum_loss_at": a["worst_cum_loss_at"], "worst_cum_loss_mtm": a["worst_cum_loss_mtm"],
+                     "worst_cum_loss_mtm_quarter": a["worst_cum_loss_mtm_quarter"], "max_size_x": a["max_size_x"],
+                     "max_notional": a["max_notional"], "capital_needed": a["capital_needed"],
+                     "campaigns": a["campaigns"], "max_campaign_quarters": a["max_campaign_quarters"],
+                     "n_otm": a["n_otm"], "n_losses": a["n_losses"], "hedge_pnl_total": a["hedge_pnl_total"],
+                     "fixed_total_pnl": b["total_pnl"], "fixed_worst_cum_loss": b["worst_cum_loss"],
+                     "fixed_worst_cum_loss_mtm": b["worst_cum_loss_mtm"]})
+    return {"variants": out, "table": pd.DataFrame(rows)}
+
+
+def campaign_variant_robustness(df: pd.DataFrame, vp: VolParams, mp: MarketParams, base: float = 100_000.0,
+                                starts=("2008-01-01", "1990-01-01")) -> pd.DataFrame:
+    """Worst day and profit per year of every variant on all three roll calendars and two start years."""
+    big = replace(mp, capital=1e12, base_notional=base)
+    rows = []
+    for cname, (months, cstart) in CALENDARS.items():
+        ctx = Context(df, vp, big, months, cstart)
+        for start in starts:
+            for vid, label, st, hd in CAMPAIGN_VARIANTS:
+                sm = recovery_campaigns(df, vp, mp, start, base, structure=st, hedge=hd, ctx=ctx)["summary"]
+                rows.append({"variant": vid, "label": label, "calendar": cname, "start_year": int(start[:4]),
+                             "first_roll": sm["first_roll"], "total_pnl_per_year": sm["total_pnl_per_year"],
+                             "worst_cum_loss": sm["worst_cum_loss"], "worst_cum_loss_mtm": sm["worst_cum_loss_mtm"],
+                             "max_size_x": sm["max_size_x"], "capital_needed": sm["capital_needed"]})
+    return pd.DataFrame(rows)

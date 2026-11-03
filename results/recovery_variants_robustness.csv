@@ -1,0 +1,43 @@
+variant,label,calendar,start_year,first_roll,total_pnl_per_year,worst_cum_loss,worst_cum_loss_mtm,max_size_x,capital_needed
+naked,Naked ATM put,Mar/Jun/Sep/Dec,2008,2008-03-20,13120.02,-53140.0,-104425.0,7.94,183810.0
+spread10,ATM put + long put 10% lower,Mar/Jun/Sep/Dec,2008,2008-03-20,7747.07,-30756.0,-87417.0,10.12,97836.0
+naked_h25,Naked + delta hedge below -2.5%,Mar/Jun/Sep/Dec,2008,2008-03-20,8476.49,-26235.0,-28573.0,4.19,68612.0
+naked_h5,Naked + delta hedge below -5%,Mar/Jun/Sep/Dec,2008,2008-03-20,10605.55,-93927.0,-95288.0,12.43,219560.0
+naked_h25_latch,Naked + delta hedge from -2.5% to expiry,Mar/Jun/Sep/Dec,2008,2008-03-20,6582.23,-49858.0,-55131.0,14.84,199751.0
+naked_h5_latch,Naked + delta hedge from -5% to expiry,Mar/Jun/Sep/Dec,2008,2008-03-20,10133.69,-20414.0,-22614.0,6.67,87752.0
+spread10_h5,Spread -10% + delta hedge below -5%,Mar/Jun/Sep/Dec,2008,2008-03-20,6328.95,-41272.0,-43925.0,12.95,126037.0
+naked,Naked ATM put,Mar/Jun/Sep/Dec,1990,1990-03-16,13971.45,-121680.0,-204772.0,10.92,313925.0
+spread10,ATM put + long put 10% lower,Mar/Jun/Sep/Dec,1990,1990-03-16,7714.98,-96549.0,-176579.0,25.72,253307.0
+naked_h25,Naked + delta hedge below -2.5%,Mar/Jun/Sep/Dec,1990,1990-03-16,7829.25,-94607.0,-133435.0,8.71,220527.0
+naked_h5,Naked + delta hedge below -5%,Mar/Jun/Sep/Dec,1990,1990-03-16,10595.87,-93927.0,-118339.0,12.43,219560.0
+naked_h25_latch,Naked + delta hedge from -2.5% to expiry,Mar/Jun/Sep/Dec,1990,1990-03-16,5869.09,-106575.0,-121355.0,33.45,455814.0
+naked_h5_latch,Naked + delta hedge from -5% to expiry,Mar/Jun/Sep/Dec,1990,1990-03-16,9304.85,-39261.0,-57608.0,6.67,98481.0
+spread10_h5,Spread -10% + delta hedge below -5%,Mar/Jun/Sep/Dec,1990,1990-03-16,6050.47,-41272.0,-50296.0,12.95,126037.0
+naked,Naked ATM put,Jan/Apr/Jul/Oct,2008,2008-01-18,12653.68,-22869.0,-67800.0,3.36,101387.0
+spread10,ATM put + long put 10% lower,Jan/Apr/Jul/Oct,2008,2008-01-18,7601.05,-34391.0,-74106.0,11.79,114712.0
+naked_h25,Naked + delta hedge below -2.5%,Jan/Apr/Jul/Oct,2008,2008-01-18,7381.99,-36909.0,-62275.0,6.41,113511.0
+naked_h5,Naked + delta hedge below -5%,Jan/Apr/Jul/Oct,2008,2008-01-18,9737.55,-54184.0,-86544.0,10.54,172249.0
+naked_h25_latch,Naked + delta hedge from -2.5% to expiry,Jan/Apr/Jul/Oct,2008,2008-01-18,5754.21,-14655.0,-20639.0,3.49,52114.0
+naked_h5_latch,Naked + delta hedge from -5% to expiry,Jan/Apr/Jul/Oct,2008,2008-01-18,8970.45,-28506.0,-38322.0,5.18,90093.0
+spread10_h5,Spread -10% + delta hedge below -5%,Jan/Apr/Jul/Oct,2008,2008-01-18,6159.79,-98503.0,-192257.0,36.88,366037.0
+naked,Naked ATM put,Jan/Apr/Jul/Oct,1990,1990-01-19,12751.63,-246291.0,-410524.0,22.56,537417.0
+spread10,ATM put + long put 10% lower,Jan/Apr/Jul/Oct,1990,1990-01-19,7133.79,-555234.0,-585040.0,145.88,1455006.0
+naked_h25,Naked + delta hedge below -2.5%,Jan/Apr/Jul/Oct,1990,1990-01-19,7915.98,-130945.0,-208775.0,20.19,371205.0
+naked_h5,Naked + delta hedge below -5%,Jan/Apr/Jul/Oct,1990,1990-01-19,10116.0,-214024.0,-365730.0,28.13,625840.0
+naked_h25_latch,Naked + delta hedge from -2.5% to expiry,Jan/Apr/Jul/Oct,1990,1990-01-19,6584.3,-38849.0,-51575.0,7.85,118502.0
+naked_h5_latch,Naked + delta hedge from -5% to expiry,Jan/Apr/Jul/Oct,1990,1990-01-19,8807.15,-97308.0,-126241.0,15.26,278829.0
+spread10_h5,Spread -10% + delta hedge below -5%,Jan/Apr/Jul/Oct,1990,1990-01-19,5913.03,-189464.0,-378515.0,55.1,547496.0
+naked,Naked ATM put,Feb/May/Aug/Nov,2008,2008-02-15,13935.68,-40370.0,-49473.0,6.25,111965.0
+spread10,ATM put + long put 10% lower,Feb/May/Aug/Nov,2008,2008-02-15,8244.32,-29989.0,-47184.0,10.21,98874.0
+naked_h25,Naked + delta hedge below -2.5%,Feb/May/Aug/Nov,2008,2008-02-15,9172.25,-21619.0,-35603.0,4.86,74791.0
+naked_h5,Naked + delta hedge below -5%,Feb/May/Aug/Nov,2008,2008-02-15,11690.92,-29296.0,-40602.0,5.26,93220.0
+naked_h25_latch,Naked + delta hedge from -2.5% to expiry,Feb/May/Aug/Nov,2008,2008-02-15,7323.85,-39753.0,-41034.0,9.3,133713.0
+naked_h5_latch,Naked + delta hedge from -5% to expiry,Feb/May/Aug/Nov,2008,2008-02-15,9704.08,-27003.0,-39035.0,6.52,104241.0
+spread10_h5,Spread -10% + delta hedge below -5%,Feb/May/Aug/Nov,2008,2008-02-15,7316.83,-19802.0,-31747.0,7.08,67579.0
+naked,Naked ATM put,Feb/May/Aug/Nov,1990,1990-02-16,13957.1,-197054.0,-543420.0,20.85,751923.0
+spread10,ATM put + long put 10% lower,Feb/May/Aug/Nov,1990,1990-02-16,7763.92,-208106.0,-521238.0,57.84,574746.0
+naked_h25,Naked + delta hedge below -2.5%,Feb/May/Aug/Nov,1990,1990-02-16,7911.81,-95758.0,-140682.0,13.97,280389.0
+naked_h5,Naked + delta hedge below -5%,Feb/May/Aug/Nov,1990,1990-02-16,10482.8,-275935.0,-361274.0,38.38,745036.0
+naked_h25_latch,Naked + delta hedge from -2.5% to expiry,Feb/May/Aug/Nov,1990,1990-02-16,6485.1,-46818.0,-57016.0,9.78,145697.0
+naked_h5_latch,Naked + delta hedge from -5% to expiry,Feb/May/Aug/Nov,1990,1990-02-16,8907.28,-99604.0,-130863.0,17.95,310413.0
+spread10_h5,Spread -10% + delta hedge below -5%,Feb/May/Aug/Nov,1990,1990-02-16,6318.56,-404835.0,-596502.0,122.73,1223972.0

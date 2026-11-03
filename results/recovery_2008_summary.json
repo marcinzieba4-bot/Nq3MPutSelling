@@ -27,7 +27,11 @@
     "worst_quarter_loss": -48167.0,
     "max_size_x": 7.94,
     "max_notional": 793846.0,
-    "campaigns": 10
+    "campaigns": 10,
+    "capital_needed": 183810.0,
+    "capital_needed_at": "2008-12-19",
+    "hedge_pnl_total": 0.0,
+    "max_campaign_quarters": 4
   },
   "fixed": {
     "base_notional": 100000.0,
@@ -57,6 +61,10 @@
     "worst_quarter_loss": -24952.0,
     "max_size_x": 1.0,
     "max_notional": 100000.0,
-    "campaigns": 9
+    "campaigns": 9,
+    "capital_needed": 50304.0,
+    "capital_needed_at": "2008-09-19",
+    "hedge_pnl_total": 0.0,
+    "max_campaign_quarters": 9
   }
 }

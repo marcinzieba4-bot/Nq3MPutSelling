@@ -42,6 +42,20 @@ Every quarter sells ATM puts on $100k of NQ notional from 2008-03-20; profits ar
 | Worst cumulated loss on any day (marked to market) | -$104,425 | -$40,304 |
 | Biggest position | 7.94x = $793,846 notional | $100,000 |
 
+### Same rule with a 10% OTM long put, or a delta hedge after a 2.5% / 5% fall
+
+| Variant (from 2008, $100k base) | Normal P&L if OTM | Total P&L | Worst cumulated loss (expiry) | Worst on any day | Biggest size |
+|---|---|---|---|---|---|
+| Naked ATM put | $4,216 | $242,680 | -$53,140 | -$104,425 | 7.9x |
+| ATM put + long put 10% lower | $2,560 | $143,297 | -$30,756 | -$87,417 | 10.1x |
+| Naked + delta hedge below -2.5% | $4,216 | $156,789 | -$26,235 | -$28,573 | 4.2x |
+| Naked + delta hedge below -5% | $4,216 | $196,170 | -$93,927 | -$95,288 | 12.4x |
+| Naked + delta hedge from -2.5% to expiry | $4,216 | $121,751 | -$49,858 | -$55,131 | 14.8x |
+| Naked + delta hedge from -5% to expiry | $4,216 | $187,442 | -$20,414 | -$22,614 | 6.7x |
+| Spread -10% + delta hedge below -5% | $2,560 | $117,066 | -$41,272 | -$43,925 | 12.9x |
+
+Robustness across all roll calendars and a 1990 start: [`results/recovery_variants_robustness.csv`](results/recovery_variants_robustness.csv). Premiums are estimated per quarter from that day's implied volatility (not fixed, not traded quotes).
+
 ## Run it
 
 ```bash
