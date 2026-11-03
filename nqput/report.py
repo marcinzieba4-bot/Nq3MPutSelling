@@ -548,6 +548,29 @@ def _h5_section(h5: dict) -> list[str]:
                     "Fixed: capital needed": _usd}) + "\n")
     w(f"At the same worst-day loss, the bigger fixed size earned more in {wins} of {len(er)} tests and always needed less "
       "capital. The value is in the hedge; the recovery sizing mostly adds calendar luck.\n")
+    cm = h5["calmar"]
+    piv = cm.pivot_table(index=["variant", "sizing"], columns=["start_year", "calendar"], values="calmar", sort=False)
+    rows = []
+    for (v, z), r in piv.iterrows():
+        d = {"Variant": v, "Sizing": z}
+        for sy_ in (2008, 1990):
+            for cal_ in ("Mar/Jun/Sep/Dec", "Jan/Apr/Jul/Oct", "Feb/May/Aug/Nov"):
+                d[f"{sy_} {cal_[:3]}"] = r[(sy_, cal_)]
+        vals = [r[c] for c in piv.columns]
+        d["Median"] = float(np.median(vals))
+        rows.append(d)
+    ct = pd.DataFrame(rows)
+    main = cm[(cm.variant == "Hedge from -5% to expiry") & (cm.start_year == 2008) & (cm.calendar == "Mar/Jun/Sep/Dec")]
+    w("**Calmar ratio** = average annual P&L / largest peak-to-trough drawdown of the daily marked P&L. Profits are not "
+      "reinvested, so both are in dollars and the ratio does not depend on account size:\n")
+    w(_md_table(ct, {c: (lambda v: f"{v:.2f}") for c in ct.columns[2:]}) + "\n")
+    rec = main[main.sizing == "Recovery rule"].iloc[0]
+    fx = main[main.sizing == "Fixed size"].iloc[0]
+    w(f"From 2008 on the Mar/Jun/Sep/Dec calendar the hedge scores {rec.calmar:.2f} with the recovery rule "
+      f"({_usd(rec.pnl_per_year)} a year over a {_usd(-rec.max_drawdown)} drawdown) and {fx.calmar:.2f} at fixed size. "
+      f"That is the best of the six tests; including the dot-com bust (from 1990) it drops to "
+      f"{cm[(cm.variant == 'Hedge from -5% to expiry') & (cm.start_year == 1990)].calmar.min():.2f}-"
+      f"{cm[(cm.variant == 'Hedge from -5% to expiry') & (cm.start_year == 1990)].calmar.max():.2f}.\n")
     return L
 
 

@@ -459,6 +459,17 @@ By year, recovery rule:
 
 At the same worst-day loss, the bigger fixed size earned more in 4 of 6 tests and always needed less capital. The value is in the hedge; the recovery sizing mostly adds calendar luck.
 
+**Calmar ratio** = average annual P&L / largest peak-to-trough drawdown of the daily marked P&L. Profits are not reinvested, so both are in dollars and the ratio does not depend on account size:
+
+| Variant | Sizing | 2008 Mar | 2008 Jan | 2008 Feb | 1990 Mar | 1990 Jan | 1990 Feb | Median |
+|---|---|---|---|---|---|---|---|---|
+| Naked ATM put | Recovery rule | 0.12 | 0.18 | 0.27 | 0.07 | 0.03 | 0.03 | 0.09 |
+| Naked ATM put | Fixed size | 0.19 | 0.24 | 0.20 | 0.08 | 0.09 | 0.11 | 0.15 |
+| Hedge from -5% to expiry | Recovery rule | 0.42 | 0.22 | 0.25 | 0.16 | 0.07 | 0.06 | 0.19 |
+| Hedge from -5% to expiry | Fixed size | 0.40 | 0.19 | 0.37 | 0.16 | 0.11 | 0.12 | 0.17 |
+
+From 2008 on the Mar/Jun/Sep/Dec calendar the hedge scores 0.42 with the recovery rule ($10,134 a year over a -$24,193 drawdown) and 0.40 at fixed size. That is the best of the six tests; including the dot-com bust (from 1990) it drops to 0.06-0.16.
+
 ## 10. Limitations
 
 * Premiums are reconstructed from VXN/VIX, not traded quotes. Error is probably ±10% of premium, and larger before 2001 (VXN proxy) and before 1990 (VXO-based). NQ options did not exist before ~1999-2000; earlier years are a hypothetical on the index.

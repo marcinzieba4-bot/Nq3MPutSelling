@@ -533,6 +533,13 @@ def recovery_campaigns(df: pd.DataFrame, vp: VolParams, mp: MarketParams, start:
         "max_campaign_quarters": int(camp.loc[camp.won_back.astype(str).str[:2] == "20", "quarters"].max())
         if len(camp) else 0,
     }
+    # Calmar ratio: average annual P&L / largest peak-to-trough drawdown of the daily marked P&L (settled period).
+    # Profits are not reinvested, so both are in dollars and the ratio does not depend on the account size.
+    eqs = eq[eq.index <= res.cycles.loc[~res.cycles.open, "expiry"].max()]
+    yrs = (eqs.index[-1] - eqs.index[0]).days / 365.25
+    max_dd = float((eqs.cummax().clip(lower=0) - eqs).max())
+    summary["max_drawdown"] = max_dd
+    summary["calmar"] = float(eqs.iloc[-1]) / yrs / max_dd if max_dd > 0 else float("nan")
     return {"ledger": led, "campaigns": camp, "summary": summary, "run": res}
 
 
@@ -601,7 +608,9 @@ def campaign_variants(df: pd.DataFrame, vp: VolParams, mp: MarketParams, start: 
                      "campaigns": a["campaigns"], "max_campaign_quarters": a["max_campaign_quarters"],
                      "n_otm": a["n_otm"], "n_losses": a["n_losses"], "hedge_pnl_total": a["hedge_pnl_total"],
                      "fixed_total_pnl": b["total_pnl"], "fixed_worst_cum_loss": b["worst_cum_loss"],
-                     "fixed_worst_cum_loss_mtm": b["worst_cum_loss_mtm"]})
+                     "fixed_worst_cum_loss_mtm": b["worst_cum_loss_mtm"],
+                     "max_drawdown": a["max_drawdown"], "calmar": a["calmar"],
+                     "fixed_max_drawdown": b["max_drawdown"], "fixed_calmar": b["calmar"]})
     return {"variants": out, "table": pd.DataFrame(rows)}
 
 
@@ -720,4 +729,23 @@ def equal_risk_comparison(df: pd.DataFrame, vp: VolParams, mp: MarketParams, hed
                          "fixed_capital_needed": f["capital_needed"],
                          "fixed_multiple_same_worst_day": k, "fixed_same_risk_pnl_per_year": k * f["total_pnl_per_year"],
                          "fixed_same_risk_capital": k * f["capital_needed"]})
+    return pd.DataFrame(rows)
+
+
+
+def calmar_by_test(df: pd.DataFrame, vp: VolParams, mp: MarketParams, base: float = 100_000.0,
+                   starts=("2008-01-01", "1990-01-01")) -> pd.DataFrame:
+    """Calmar ratio of the naked put and the -5% hedge, recovery rule and fixed size, every calendar and start."""
+    big = replace(mp, capital=1e12, base_notional=base)
+    rows = []
+    for cname, (months, cstart) in CALENDARS.items():
+        ctx = Context(df, vp, big, months, cstart)
+        for st_ in starts:
+            for vname, hd in [("Naked ATM put", NO_HEDGE), ("Hedge from -5% to expiry", H5_LATCH)]:
+                for sz in [RECOVER, FIXED]:
+                    sm = recovery_campaigns(df, vp, mp, st_, base, sizing=sz, structure=NAKED, hedge=hd, ctx=ctx)["summary"]
+                    rows.append({"variant": vname, "sizing": "Recovery rule" if sz is RECOVER else "Fixed size",
+                                 "start_year": int(st_[:4]), "calendar": cname,
+                                 "pnl_per_year": sm["total_pnl"] / ((pd.Timestamp(sm["last_expiry"]) - pd.Timestamp(sm["first_roll"])).days / 365.25),
+                                 "max_drawdown": sm["max_drawdown"], "calmar": sm["calmar"]})
     return pd.DataFrame(rows)

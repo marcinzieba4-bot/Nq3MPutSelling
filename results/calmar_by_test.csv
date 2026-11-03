@@ -1,0 +1,25 @@
+variant,sizing,start_year,calendar,pnl_per_year,max_drawdown,calmar
+Naked ATM put,Recovery rule,2008,Mar/Jun/Sep/Dec,13120.0222,107277.8394,0.1222
+Naked ATM put,Fixed size,2008,Mar/Jun/Sep/Dec,8204.8796,43156.1926,0.19
+Hedge from -5% to expiry,Recovery rule,2008,Mar/Jun/Sep/Dec,10133.6872,24193.2236,0.4186
+Hedge from -5% to expiry,Fixed size,2008,Mar/Jun/Sep/Dec,5204.9747,13024.7896,0.3992
+Naked ATM put,Recovery rule,1990,Mar/Jun/Sep/Dec,13971.4493,211501.0709,0.066
+Naked ATM put,Fixed size,1990,Mar/Jun/Sep/Dec,6520.8424,85038.6392,0.0766
+Hedge from -5% to expiry,Recovery rule,1990,Mar/Jun/Sep/Dec,9304.8499,59271.6926,0.1569
+Hedge from -5% to expiry,Fixed size,1990,Mar/Jun/Sep/Dec,4007.2595,25550.2789,0.1567
+Naked ATM put,Recovery rule,2008,Jan/Apr/Jul/Oct,12653.677,71631.0366,0.1766
+Naked ATM put,Fixed size,2008,Jan/Apr/Jul/Oct,9479.6407,40077.5413,0.2364
+Hedge from -5% to expiry,Recovery rule,2008,Jan/Apr/Jul/Oct,8970.4461,40521.2122,0.2212
+Hedge from -5% to expiry,Fixed size,2008,Jan/Apr/Jul/Oct,4015.2424,21415.9091,0.1872
+Naked ATM put,Recovery rule,1990,Jan/Apr/Jul/Oct,12751.6317,414999.9243,0.0307
+Naked ATM put,Fixed size,1990,Jan/Apr/Jul/Oct,6795.5444,76118.1863,0.0892
+Hedge from -5% to expiry,Recovery rule,1990,Jan/Apr/Jul/Oct,8807.1549,126327.5717,0.0697
+Hedge from -5% to expiry,Fixed size,1990,Jan/Apr/Jul/Oct,3280.2275,29523.6897,0.111
+Naked ATM put,Recovery rule,2008,Feb/May/Aug/Nov,13935.6757,51699.2023,0.2694
+Naked ATM put,Fixed size,2008,Feb/May/Aug/Nov,8630.3141,43247.5973,0.1994
+Hedge from -5% to expiry,Recovery rule,2008,Feb/May/Aug/Nov,9704.08,39307.9768,0.2467
+Hedge from -5% to expiry,Fixed size,2008,Feb/May/Aug/Nov,5142.182,14060.7157,0.3653
+Naked ATM put,Recovery rule,1990,Feb/May/Aug/Nov,13957.0968,546579.8124,0.0255
+Naked ATM put,Fixed size,1990,Feb/May/Aug/Nov,8222.3842,73228.9009,0.1122
+Hedge from -5% to expiry,Recovery rule,1990,Feb/May/Aug/Nov,8907.2793,137363.916,0.0648
+Hedge from -5% to expiry,Fixed size,1990,Feb/May/Aug/Nov,4236.5987,36247.7885,0.1168

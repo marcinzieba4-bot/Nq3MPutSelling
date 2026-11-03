@@ -31,7 +31,9 @@
     "capital_needed": 183810.0,
     "capital_needed_at": "2008-12-19",
     "hedge_pnl_total": 0.0,
-    "max_campaign_quarters": 4
+    "max_campaign_quarters": 4,
+    "max_drawdown": 107277.83935546875,
+    "calmar": 0.12224984409820758
   },
   "fixed": {
     "base_notional": 100000.0,
@@ -65,6 +67,8 @@
     "capital_needed": 50304.0,
     "capital_needed_at": "2008-09-19",
     "hedge_pnl_total": 0.0,
-    "max_campaign_quarters": 9
+    "max_campaign_quarters": 9,
+    "max_drawdown": 43156.192626953125,
+    "calmar": 0.18999670799930746
   }
 }

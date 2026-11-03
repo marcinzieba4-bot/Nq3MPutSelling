@@ -126,6 +126,8 @@ def main() -> None:
     h5["breakdown_fixed"].to_csv(RES / "h5_pnl_breakdown_fixed.csv")
     h5["equal_risk"] = A.equal_risk_comparison(df, vp, mp)
     h5["equal_risk"].round(2).to_csv(RES / "h5_equal_risk.csv", index=False)
+    h5["calmar"] = A.calmar_by_test(df, vp, mp)
+    h5["calmar"].round(4).to_csv(RES / "calmar_by_test.csv", index=False)
     camp["h5"] = h5
 
     if not args.no_report:
