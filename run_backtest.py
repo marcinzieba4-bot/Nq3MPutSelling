@@ -33,11 +33,11 @@ def main() -> None:
     t0 = time.time()
     RES.mkdir(exist_ok=True)
 
-    print("1/7 data")
+    print("1/8 data")
     download_all(RAW, refresh=args.refresh)
     df = load_market_data(RAW)
 
-    print("2/7 vol model + cycles")
+    print("2/8 vol model + cycles")
     vp, mp = VolParams(), MarketParams()
     ctx = A.Context(df, vp, mp)
     (RES / "vol_model_fit.json").write_text(json.dumps(ctx.diag, indent=2, default=str))
@@ -46,12 +46,12 @@ def main() -> None:
     ivs = ivs[ivs.index >= "1986-01-01"]
     ivs[ivs.index.weekday == 4].round(4).to_csv(RES / "implied_vol_weekly_model.csv")
 
-    print("3/7 premium history")
+    print("3/8 premium history")
     pt = A.premium_table(ctx)
     pt.to_csv(RES / "premiums_quarterly.csv", index=False)
     A.premium_by_year(pt).to_csv(RES / "premiums_by_year.csv")
 
-    print("4/7 strategy grid")
+    print("4/8 strategy grid")
     grid, runs = A.strategy_grid(ctx)
     grid.round(4).to_csv(RES / "strategy_grid.csv", index=False)
     grid01, _ = A.strategy_grid(ctx, start="2001-03-01")
@@ -70,7 +70,7 @@ def main() -> None:
     eq = pd.DataFrame(key_eq)
     eq[eq.index.weekday == 4].round(0).to_csv(RES / "equity_weekly_key_strategies.csv")
 
-    print("5/7 recovery sizing by start year")
+    print("5/8 recovery sizing by start year")
     pairs = [(A.NAKED, A.NO_HEDGE, A.FIXED), (A.NAKED, A.NO_HEDGE, A.RECOVER),
              (A.STRUCTURES[2], A.NO_HEDGE, A.FIXED), (A.STRUCTURES[2], A.NO_HEDGE, A.RECOVER),
              (A.STRUCTURES[4], A.NO_HEDGE, A.RECOVER),
@@ -78,7 +78,7 @@ def main() -> None:
     sy = A.start_year_table(ctx, pairs, range(1987, 2025))
     sy.round(3).to_csv(RES / "start_year_robustness.csv", index=False)
 
-    print("6/7 sensitivity + ladder")
+    print("6/8 sensitivity + ladder")
     sens = A.sensitivity(df, vp, mp)
     sens.round(4).to_csv(RES / "sensitivity.csv", index=False)
     lad = A.ladder_table(df, vp, mp)
@@ -88,13 +88,23 @@ def main() -> None:
     pao = A.premium_after_outcome(pt)
     pao.round(3).to_csv(RES / "premium_after_outcome.csv")
 
-    print("7/7 live snapshot")
+    print("7/8 live snapshot")
     snap = A.live_snapshot(ctx)
     (RES / "live_snapshot.json").write_text(json.dumps(snap, indent=2, default=float))
 
+    print("8/8 start 2008 with a 50% drawdown limit (USD ledger)")
+    usd = A.usd_scenario(df, vp, mp)
+    usd["ledger"].to_csv(RES / "usd_ledger_2008_dd50_recover.csv", index=False)
+    usd["ledger_fixed"].to_csv(RES / "usd_ledger_2008_dd50_fixed.csv", index=False)
+    usd["by_year"].to_csv(RES / "usd_ledger_2008_dd50_by_year.csv")
+    usd["calendars"].round(2).to_csv(RES / "usd_2008_dd50_calendars.csv", index=False)
+    (RES / "usd_2008_dd50_summary.json").write_text(json.dumps(
+        {"recover_dd50": usd["summary"], "fixed_dd50": usd["summary_fixed"], "recover_no_limit": usd["summary_no_limit"]},
+        indent=2, default=float))
+
     if not args.no_report:
         from nqput import report
-        report.build(ROOT, df, ctx, runs, grid, grid01, pt, sy, sens, lad, cal, cal_runs, pao, snap)
+        report.build(ROOT, df, ctx, runs, grid, grid01, pt, sy, sens, lad, cal, cal_runs, pao, snap, usd)
     print(f"done in {time.time() - t0:.0f}s")
 
 

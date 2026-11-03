@@ -1,0 +1,10 @@
+calendar,sizing,first_roll,final_account,deepest_cum_loss,deepest_mtm_dd_pct,deepest_mtm_dd_on,max_size_x
+Mar/Jun/Sep/Dec,"Recover, 50% drawdown limit",2008-03-20,2797449.0,-349612.0,46.51,2008-11-20,2.66
+Mar/Jun/Sep/Dec,"Fixed, 50% drawdown limit",2008-03-20,2456487.0,-299245.0,39.92,2008-11-20,1.0
+Mar/Jun/Sep/Dec,Recover until whole,2008-03-20,3426804.0,-531403.0,82.93,2009-03-09,5.24
+Jan/Apr/Jul/Oct,"Recover, 50% drawdown limit",2008-01-18,3075101.0,-228693.0,34.83,2008-11-20,3.09
+Jan/Apr/Jul/Oct,"Fixed, 50% drawdown limit",2008-01-18,2760603.0,-228693.0,34.83,2008-11-20,1.0
+Jan/Apr/Jul/Oct,Recover until whole,2008-01-18,3371724.0,-228693.0,65.72,2008-11-20,3.36
+Feb/May/Aug/Nov,"Recover, 50% drawdown limit",2008-02-15,2535767.0,-403700.0,41.12,2008-11-20,2.41
+Feb/May/Aug/Nov,"Fixed, 50% drawdown limit",2008-02-15,2381954.0,-403700.0,41.12,2008-11-20,1.0
+Feb/May/Aug/Nov,Recover until whole,2008-02-15,3579958.0,-403700.0,41.12,2008-11-20,6.25

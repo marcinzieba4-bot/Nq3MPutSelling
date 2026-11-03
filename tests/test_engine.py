@@ -65,6 +65,23 @@ def test_recovery_sizing_targets_deficit():
         assert abs(cyc.mult_wanted.iloc[i] - expected) < 1e-9
 
 
+def test_drawdown_limit_caps_size():
+    """With dd_limit, a stress loss at the chosen size never exceeds the remaining drawdown budget."""
+    from nqput.backtest import stress_loss_frac
+    mp = MarketParams(opt_slip_vol=0.0, opt_comm_pts=0.0, fut_cost_bp=0.0)
+    vp = VolParams(skew_alpha=0.0)
+    units = [unit_cycle(_synthetic_cycle(s, 0.35, 0.2), Structure("naked"), Hedge(), mp, vp) for s in range(40)]
+    sz = Sizing("recover, 50% limit", "recover", dd_limit=0.5, dd_stress=0.45)
+    res = run_sizing(units, sz, mp)
+    hwm, E = mp.capital, mp.capital
+    for i, row in res.cycles.iterrows():
+        budget = E - 0.5 * hwm
+        worst = row.mult * mp.base_notional * stress_loss_frac(units[i], 0.45)
+        assert worst <= budget + 1e-6
+        E = row.equity
+        hwm = max(hwm, E)
+
+
 if __name__ == "__main__":
     for name, fn in list(globals().items()):
         if name.startswith("test_"):

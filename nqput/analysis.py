@@ -315,3 +315,106 @@ def vrp_stats(ctx: Context) -> dict:
     dec = x.groupby(x.year // 10 * 10).gap.mean()
     return {"mean_gap": float(x.gap.mean()), "median_gap": float(x.gap.median()),
             "share_iv_above": float((x.gap > 0).mean()), "by_decade": {int(k): float(v) for k, v in dec.items()}}
+
+
+# ----------------------------------------------------------------------------- USD ledger (drawdown-limited)
+DD50_RECOVER = Sizing("Recover, 50% drawdown limit", "recover", dd_limit=0.5, dd_stress=0.45)
+DD50_FIXED = Sizing("Fixed, 50% drawdown limit", "fixed", dd_limit=0.5, dd_stress=0.45)
+
+
+def usd_ledger(ctx: Context, st: Structure, sz: Sizing, start: str) -> tuple[pd.DataFrame, dict]:
+    """Quarter-by-quarter dollar ledger: premium kept when the put expires worthless, losses when it
+    finishes in the money, and the cumulated loss still to win back (equity high minus equity)."""
+    res = ctx.run(st, NO_HEDGE, sz, start)
+    c = res.cycles.copy()
+    rows, hwm = [], ctx.mp.capital
+    for _, r in c.iterrows():
+        pnl = r.pnl_usd
+        if r.open:
+            outcome = "open (marked to market)"
+        elif r.S_T >= r.K1:
+            outcome = "expired worthless"
+        elif pnl >= 0:
+            outcome = "in the money, still a profit"
+        else:
+            outcome = "in the money, loss"
+        if not r.open:
+            hwm = max(hwm, r.equity)
+        rows.append({
+            "entry": r.entry.date(), "expiry": r.expiry.date(), "status": "open" if r.open else "settled",
+            "nq_contracts": round(r.nq_contracts, 2), "size_x": round(r.mult, 2),
+            "limit_applied": "yes" if r.dd_capped else "",
+            "premium_usd": round(r.premium_usd), "outcome": outcome,
+            "profit_usd": round(pnl) if pnl >= 0 else None,
+            "loss_usd": round(pnl) if pnl < 0 else None,
+            "cum_loss_usd": round(min(0.0, r.equity - hwm)), "account_usd": round(r.equity),
+        })
+    led = pd.DataFrame(rows)
+    s = led[led.status == "settled"]
+    eq = res.daily
+    mtm_dd = eq.cummax() - eq
+    worst_i = s.cum_loss_usd.idxmin()
+    summary = {
+        "start_capital": ctx.mp.capital, "base_notional": ctx.mp.base_notional,
+        "first_roll": str(s.entry.iloc[0]), "last_expiry": str(s.expiry.iloc[-1]), "quarters": len(s),
+        "final_account": float(s.account_usd.iloc[-1]),
+        "net_profit": float(s.account_usd.iloc[-1] - ctx.mp.capital),
+        "profit_worthless": float(s.loc[s.outcome == "expired worthless", "profit_usd"].sum()),
+        "n_worthless": int((s.outcome == "expired worthless").sum()),
+        "profit_itm_small": float(s.loc[s.outcome == "in the money, still a profit", "profit_usd"].sum()),
+        "n_itm_small": int((s.outcome == "in the money, still a profit").sum()),
+        "losses": float(s.loss_usd.sum()), "n_losses": int(s.loss_usd.notna().sum()),
+        "avg_profit_worthless": float(s.loc[s.outcome == "expired worthless", "profit_usd"].mean()),
+        "worst_quarter_loss": float(s.loss_usd.min()),
+        "deepest_cum_loss": float(s.cum_loss_usd.min()), "deepest_cum_loss_at": str(s.expiry[worst_i]),
+        "deepest_mtm_loss": float(-mtm_dd.max()), "deepest_mtm_loss_on": str(mtm_dd.idxmax().date()),
+        "deepest_mtm_dd_pct": float(100 * ((eq.cummax() - eq) / eq.cummax()).max()),
+        "deepest_mtm_dd_on": str(((eq.cummax() - eq) / eq.cummax()).idxmax().date()),
+        "max_size_x": float(s.size_x.max()), "quarters_limited": int((s.limit_applied == "yes").sum()),
+    }
+    # longest stretch below the equity high, in quarters
+    run = best = 0
+    for v in s.cum_loss_usd:
+        run = run + 1 if v < 0 else 0
+        best = max(best, run)
+    summary["longest_underwater_q"] = best
+    return led, summary
+
+
+def ledger_by_year(led: pd.DataFrame) -> pd.DataFrame:
+    """Dollar ledger summed by expiry year (settled quarters only)."""
+    x = led[led.status == "settled"].copy()
+    x["year"] = pd.to_datetime(x.expiry).dt.year
+    g = x.groupby("year")
+    out = pd.DataFrame({
+        "quarters": g.size(),
+        "expired_worthless": g.outcome.apply(lambda s: int((s == "expired worthless").sum())),
+        "profit_worthless_usd": g.apply(lambda d: d.loc[d.outcome == "expired worthless", "profit_usd"].sum(),
+                                        include_groups=False),
+        "profit_itm_usd": g.apply(lambda d: d.loc[d.outcome == "in the money, still a profit", "profit_usd"].sum(),
+                                  include_groups=False),
+        "losses_usd": g.loss_usd.sum(),
+        "worst_cum_loss_usd": g.cum_loss_usd.min(),
+        "account_end_usd": g.account_usd.last(),
+    })
+    return out.round(0)
+
+
+def usd_scenario(df: pd.DataFrame, vp: VolParams, mp: MarketParams, start: str = "2008-01-01") -> dict:
+    """Start in 2008 with a 50% drawdown limit: ledgers and summaries (plus checks on other calendars)."""
+    ctx = Context(df, vp, mp)
+    led, sm = usd_ledger(ctx, NAKED, DD50_RECOVER, start)
+    led_fx, sm_fx = usd_ledger(ctx, NAKED, DD50_FIXED, start)
+    _, sm_nolim = usd_ledger(ctx, NAKED, RECOVER, start)
+    cal_rows = []
+    for cname, (months, cstart) in CALENDARS.items():
+        cctx = ctx if months == (3, 6, 9, 12) else Context(df, vp, mp, months, cstart)
+        for sz in [DD50_RECOVER, DD50_FIXED, RECOVER]:
+            _, s2 = usd_ledger(cctx, NAKED, sz, start)
+            cal_rows.append({"calendar": cname, "sizing": sz.name, "first_roll": s2["first_roll"],
+                             "final_account": s2["final_account"], "deepest_cum_loss": s2["deepest_cum_loss"],
+                             "deepest_mtm_dd_pct": s2["deepest_mtm_dd_pct"], "deepest_mtm_dd_on": s2["deepest_mtm_dd_on"],
+                             "max_size_x": s2["max_size_x"]})
+    return {"ledger": led, "summary": sm, "ledger_fixed": led_fx, "summary_fixed": sm_fx,
+            "summary_no_limit": sm_nolim, "calendars": pd.DataFrame(cal_rows), "by_year": ledger_by_year(led),
+            "by_year_fixed": ledger_by_year(led_fx)}

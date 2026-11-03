@@ -64,6 +64,8 @@ class Sizing:
     max_mult: float = np.inf           # cap on the size multiplier
     extra_profit: float = 0.0          # extra target as fraction of deficit
     trend_filter: bool = False         # only sell when NDX > 200-day average at the roll
+    dd_limit: float | None = None      # e.g. 0.5: never size so a stress move breaks -50% from the equity high
+    dd_stress: float = 0.40            # NQ fall by expiry the drawdown limit is sized against
 
 
 # ----------------------------------------------------------------------------- calendar
@@ -233,6 +235,16 @@ def unit_cycle(c: Cycle, st: Structure, hd: Hedge, mp: MarketParams, vp: VolPara
 
 
 # ----------------------------------------------------------------------------- sizing
+def stress_loss_frac(u: UnitCycle, drop: float) -> float:
+    """Loss per $1 of notional at expiry if the future falls by `drop` (0.40 = -40%) from entry."""
+    F0 = u.cycle.F0
+    FT = F0 * (1 - drop)
+    if "K1" not in u.info:  # long futures benchmark
+        return drop
+    pay = max(u.info["K1"] - FT, 0.0) - (max(u.info["K2"] - FT, 0.0) if "K2" in u.info else 0.0)
+    return max(pay - u.credit, 0.0) / F0
+
+
 @dataclass
 class RunResult:
     name: str
@@ -265,6 +277,14 @@ def run_sizing(units: list[UnitCycle], sz: Sizing, mp: MarketParams, name: str =
         m = min(m, sz.max_mult)
         if sz.trend_filter and not c.trend_up:
             m = 0.0
+        dd_budget, m_dd = np.nan, np.inf
+        if sz.dd_limit is not None:
+            # dollars that may still be lost before equity is dd_limit below its high
+            dd_budget = E - (1 - sz.dd_limit) * hwm
+            sl = stress_loss_frac(u, sz.dd_stress)
+            m_dd = dd_budget / (N0 * sl) if (dd_budget > 0 and sl > 0) else 0.0
+        dd_capped = m > m_dd + 1e-12
+        m = min(m, m_dd)
         m_wanted = m
         m_margin = E / (N0 * u.margin_frac) if E > 0 else 0.0
         m = max(0.0, min(m, m_margin))
@@ -279,6 +299,7 @@ def run_sizing(units: list[UnitCycle], sz: Sizing, mp: MarketParams, name: str =
         rows.append({
             "entry": c.entry, "expiry": c.expiry, "open": c.open, "iv_src": c.src,
             "mult": m, "mult_wanted": m_wanted, "margin_capped": m < m_wanted - 1e-9,
+            "dd_capped": bool(dd_capped), "dd_budget": dd_budget,
             "notional": m * N0, "nq_contracts": m * N0 / (u.cycle.F0 * NQ_MULT),
             "premium_usd": m * N0 * u.premium_frac, "deficit_before": deficit,
             "pnl_usd": pnl, "pnl_pct_cap": pnl / mp.capital, "equity": eq[-1],

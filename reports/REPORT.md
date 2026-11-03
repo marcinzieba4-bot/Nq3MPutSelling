@@ -1,6 +1,6 @@
 # Selling 3-month ATM puts on Nasdaq-100 futures (NQ): backtest 1986-2026
 
-*Data through 2026-11-02. 162 settled quarterly rolls, 1986-03-21 to 2026-09-18. All option prices are **model estimates** (free historical NQ option quotes do not exist). See [Method](#1-what-was-tested) and [Limitations](#9-limitations).*
+*Data through 2026-11-02. 162 settled quarterly rolls, 1986-03-21 to 2026-09-18. All option prices are **model estimates** (free historical NQ option quotes do not exist). See [Method](#1-what-was-tested) and [Limitations](#10-limitations).*
 
 ## TL;DR: what to take from this
 
@@ -11,6 +11,8 @@
 5. **Delta hedging.** A full daily futures hedge strips out the equity premium and leaves only the thin vol premium: +0.5%/yr. That figure is fragile: it ranges from -1.4% to +2.4%/yr if true implied vol was 10% lower or higher than estimated. The one hedge that helped on every calendar is a **delta cap**: short futures only for the delta the put gains *above its entry delta* as NQ falls. It returned 5.2%/yr at Sharpe 0.50 (vs 0.41) with max drawdown 58% (vs 85%).
 6. **How to get your 'recovery' without a martingale.** After a losing quarter implied vol is higher, so the *same size* already collects more: on average 6.2% of notional vs 4.5% after a win, and the next quarter averaged +2.4% vs +1.3%. Size for survival instead: the naked put lost 85% of its notional in 2000-02, so naked notional of about 0.3-0.5x equity would have cost 26-43% of the account in that scenario. Cap the tail with a -15% to -20% wing or a delta cap. Ladder entries monthly (1/3 of the size per cycle) so results do not hinge on one roll date.
 7. **Today (2026-11-02).** The 3-month put sold 2026-09-18 (strike ~29,888, premium ~1,206 pts = $24,112/NQ) is **in the money**. NQ is about 28,106, the put is worth ~2,190 pts, and the mark-to-market P&L is ~-1,014 pts (-$20,281 per NQ). It has 46 days left and delta ~0.72. Under your rule, a loss at the 18-Dec expiry would trigger a bigger position. The backtest says roll at normal size, because today's rich premium already does part of the recovery.
+
+8. **Start in 2008 with a 50% drawdown limit (section 9).** $1M from 2008-03-20, your recovery rule capped so a 45% NQ crash could not take the account more than 50% below its high: puts that expired worthless earned $2,650,667 over 53 quarters, losing quarters cost -$1,108,070, net $1,797,449. The deepest cumulated loss was -$349,612 (Dec 2008); the worst day was 46.5% below the high. Without the limit the same rule was 83% down on 2009-03-09.
 
 ## 1. What was tested
 
@@ -221,7 +223,127 @@ Open backtest position: sold 2026-09-18, strike 29,888, expiry 2026-12-18. It is
 
 Check these against live quotes before trading. The model ignores the current skew and term structure of NQ options specifically.
 
-## 9. Limitations
+## 9. Start in 2008 with a 50% drawdown limit (in dollars)
+
+*A $1,000,000 account from the first 2008 roll (2008-03-20). Every quarter it sells ATM puts on $1,000,000 of NQ notional (about 29 NQ in 2008, 1.7 NQ today). After a loss your rule makes the next put bigger to win the loss back, but never bigger than what a 45% NQ fall by expiry could lose without taking the account more than 50% below its high. 45% is the worst fall inside a quarter before 2008 (-36%, Oct 1987) plus a buffer for option prices jumping in a crash. Profits are not reinvested; a smaller account scales every dollar figure down in proportion (MNQ options are 1/10 of NQ).*
+
+* **Puts that expired worthless:** 53 of 74 quarters, **$2,650,667** in total (about $50,013 per quarter).
+* **Finished in the money but above breakeven:** 10 quarters, $254,849.
+* **Finished in the money at a loss:** 11 quarters, **-$1,108,070** in total; the worst single quarter -$299,883.
+* **Net:** $1,797,449; the account ends at $2,797,449.
+* **Deepest cumulated loss** (still to win back at an expiry): **-$349,612** at the Dec 2008 expiry, back at a new high by the Jun 2011 expiry (11 quarters). On the worst day (2008-11-20) the open positions marked the account -$502,880 below its high, 46.5%: inside the 50% limit.
+* The limit cut the recovery size in 18 quarters; the largest position was 2.66x the base.
+* **Same limit, never upsizing:** ends at $2,456,487, deepest cumulated loss -$299,245, worst day 39.9% down.
+* **Your rule without the limit:** ends at $3,426,804 but was -$896,676 (83%) down on 2009-03-09, far past 50%.
+* On the other two roll calendars the limit also held: worst day 46.5% (Mar/Jun/Sep/Dec), 34.8% (Jan/Apr/Jul/Oct), 41.1% (Feb/May/Aug/Nov).
+
+![USD ledger](figures/6_usd_2008_dd50.png)
+
+| Year (expiries) | Quarters | Expired worthless | Profit, expired worthless | Profit, ITM above breakeven | Losses | Worst cumulated loss | Account at year end |
+|---|---|---|---|---|---|---|---|
+| 2008 | 3 | 1 | $52,657 | $0 | -$349,611 | -$349,612 | $703,046 |
+| 2009 | 4 | 3 | $112,228 | $25,360 | $0 | -$324,251 | $840,635 |
+| 2010 | 4 | 3 | $120,852 | $21,772 | $0 | -$179,781 | $983,259 |
+| 2011 | 4 | 2 | $80,991 | $70,419 | $0 | -$29,989 | $1,134,668 |
+| 2012 | 4 | 2 | $104,573 | $0 | -$53,138 | -$40,139 | $1,186,104 |
+| 2013 | 4 | 4 | $127,641 | $0 | $0 | $0 | $1,313,744 |
+| 2014 | 4 | 4 | $102,887 | $0 | $0 | $0 | $1,416,632 |
+| 2015 | 4 | 3 | $114,834 | $0 | -$14,064 | -$14,064 | $1,517,401 |
+| 2016 | 4 | 2 | $65,397 | $44,414 | $0 | $0 | $1,627,213 |
+| 2017 | 4 | 4 | $101,306 | $0 | $0 | $0 | $1,728,520 |
+| 2018 | 4 | 3 | $85,917 | $0 | -$165,867 | -$165,867 | $1,648,570 |
+| 2019 | 4 | 4 | $236,964 | $0 | $0 | -$71,623 | $1,885,534 |
+| 2020 | 4 | 3 | $412,678 | $0 | -$167,896 | -$167,896 | $2,130,316 |
+| 2021 | 4 | 4 | $202,383 | $0 | $0 | $0 | $2,332,699 |
+| 2022 | 4 | 1 | $157,029 | $8,927 | -$290,327 | -$290,327 | $2,208,329 |
+| 2023 | 4 | 3 | $226,834 | $36,917 | $0 | $0 | $2,472,080 |
+| 2024 | 4 | 3 | $107,453 | $24,715 | $0 | $0 | $2,604,248 |
+| 2025 | 4 | 3 | $159,582 | $0 | -$40,707 | -$40,707 | $2,723,123 |
+| 2026 | 3 | 1 | $78,461 | $22,325 | -$26,460 | -$26,460 | $2,797,449 |
+
+Every quarter (USD):
+
+| Sold | Expires | NQ puts sold | Premium collected | Outcome | Profit | Loss | Cumulated loss to win back | Account |
+|---|---|---|---|---|---|---|---|---|
+| 2008-03-20 | 2008-06-20 | 28.54 | $52,657 | expired worthless | $52,657 |  | $0 | $1,052,657 |
+| 2008-06-20 | 2008-09-19 | 25.86 | $47,886 | in the money, loss |  | -$49,728 | -$49,728 | $1,002,929 |
+| 2008-09-19 | 2008-12-19 | 34.41 | $64,235 | in the money, loss |  | -$299,883 | -$349,612 | $703,046 |
+| 2008-12-19 | 2009-03-20 | 19.47 | $36,245 | in the money, still a profit | $25,360 |  | -$324,251 | $728,406 |
+| 2009-03-20 | 2009-06-19 | 23.17 | $45,160 | expired worthless | $45,160 |  | -$279,091 | $773,566 |
+| 2009-06-19 | 2009-09-18 | 21.27 | $33,994 | expired worthless | $33,994 |  | -$245,097 | $807,560 |
+| 2009-09-18 | 2009-12-18 | 20.27 | $33,074 | expired worthless | $33,074 |  | -$212,023 | $840,635 |
+| 2009-12-18 | 2010-03-19 | 21.34 | $32,242 | expired worthless | $32,242 |  | -$179,781 | $872,877 |
+| 2010-03-19 | 2010-06-18 | 21.61 | $28,839 | in the money, still a profit | $21,772 |  | -$158,009 | $894,648 |
+| 2010-06-18 | 2010-09-17 | 24.01 | $44,626 | expired worthless | $44,626 |  | -$113,383 | $939,275 |
+| 2010-09-17 | 2010-12-17 | 25.99 | $43,984 | expired worthless | $43,984 |  | -$69,399 | $983,259 |
+| 2010-12-17 | 2011-03-18 | 24.90 | $39,410 | expired worthless | $39,410 |  | -$29,989 | $1,022,668 |
+| 2011-03-18 | 2011-06-17 | 27.71 | $56,757 | in the money, still a profit | $43,109 |  | $0 | $1,065,777 |
+| 2011-06-17 | 2011-09-16 | 22.84 | $41,581 | expired worthless | $41,581 |  | $0 | $1,107,358 |
+| 2011-09-16 | 2011-12-16 | 21.72 | $55,087 | in the money, still a profit | $27,310 |  | $0 | $1,134,668 |
+| 2011-12-16 | 2012-03-16 | 22.38 | $48,261 | expired worthless | $48,261 |  | $0 | $1,182,929 |
+| 2012-03-16 | 2012-06-15 | 18.46 | $37,738 | in the money, loss |  | -$12,999 | -$12,999 | $1,169,931 |
+| 2012-06-15 | 2012-09-21 | 25.32 | $56,312 | expired worthless | $56,312 |  | $0 | $1,226,243 |
+| 2012-09-21 | 2012-12-21 | 17.50 | $27,322 | in the money, loss |  | -$40,139 | -$40,139 | $1,186,104 |
+| 2012-12-21 | 2013-03-15 | 25.90 | $47,287 | expired worthless | $47,287 |  | $0 | $1,233,391 |
+| 2013-03-15 | 2013-06-21 | 17.89 | $23,727 | expired worthless | $23,727 |  | $0 | $1,257,117 |
+| 2013-06-21 | 2013-09-20 | 17.40 | $33,426 | expired worthless | $33,426 |  | $0 | $1,290,544 |
+| 2013-09-20 | 2013-12-20 | 15.53 | $23,201 | expired worthless | $23,201 |  | $0 | $1,313,744 |
+| 2013-12-20 | 2014-03-21 | 14.18 | $24,781 | expired worthless | $24,781 |  | $0 | $1,338,526 |
+| 2014-03-21 | 2014-06-20 | 13.71 | $30,601 | expired worthless | $30,601 |  | $0 | $1,369,127 |
+| 2014-06-20 | 2014-09-19 | 13.17 | $21,965 | expired worthless | $21,965 |  | $0 | $1,391,092 |
+| 2014-09-19 | 2014-12-19 | 12.22 | $25,540 | expired worthless | $25,540 |  | $0 | $1,416,632 |
+| 2014-12-19 | 2015-03-20 | 11.70 | $30,804 | expired worthless | $30,804 |  | $0 | $1,447,436 |
+| 2015-03-20 | 2015-06-19 | 11.23 | $27,724 | expired worthless | $27,724 |  | $0 | $1,475,160 |
+| 2015-06-19 | 2015-09-18 | 11.10 | $26,286 | in the money, loss |  | -$14,064 | -$14,064 | $1,461,096 |
+| 2015-09-18 | 2015-12-18 | 15.44 | $56,306 | expired worthless | $56,306 |  | $0 | $1,517,401 |
+| 2015-12-18 | 2016-03-18 | 11.09 | $37,425 | in the money, still a profit | $15,633 |  | $0 | $1,533,034 |
+| 2016-03-18 | 2016-06-17 | 11.35 | $36,031 | in the money, still a profit | $28,781 |  | $0 | $1,561,816 |
+| 2016-06-17 | 2016-09-16 | 11.44 | $37,364 | expired worthless | $37,364 |  | $0 | $1,599,179 |
+| 2016-09-16 | 2016-12-16 | 10.39 | $28,033 | expired worthless | $28,033 |  | $0 | $1,627,213 |
+| 2016-12-16 | 2017-03-17 | 10.18 | $26,065 | expired worthless | $26,065 |  | $0 | $1,653,278 |
+| 2017-03-17 | 2017-06-16 | 9.24 | $18,767 | expired worthless | $18,767 |  | $0 | $1,672,045 |
+| 2017-06-16 | 2017-09-15 | 8.79 | $32,265 | expired worthless | $32,265 |  | $0 | $1,704,310 |
+| 2017-09-15 | 2017-12-15 | 8.34 | $24,209 | expired worthless | $24,209 |  | $0 | $1,728,520 |
+| 2017-12-15 | 2018-03-16 | 7.72 | $22,781 | expired worthless | $22,781 |  | $0 | $1,751,301 |
+| 2018-03-16 | 2018-06-15 | 7.10 | $32,398 | expired worthless | $32,398 |  | $0 | $1,783,699 |
+| 2018-06-15 | 2018-09-21 | 6.87 | $30,738 | expired worthless | $30,738 |  | $0 | $1,814,437 |
+| 2018-09-21 | 2018-12-21 | 6.62 | $34,128 | in the money, loss |  | -$165,867 | -$165,867 | $1,648,570 |
+| 2018-12-21 | 2019-03-15 | 15.30 | $94,244 | expired worthless | $94,244 |  | -$71,623 | $1,742,814 |
+| 2019-03-15 | 2019-06-21 | 13.52 | $57,394 | expired worthless | $57,394 |  | -$14,228 | $1,800,209 |
+| 2019-06-21 | 2019-09-20 | 9.11 | $48,654 | expired worthless | $48,654 |  | $0 | $1,848,862 |
+| 2019-09-20 | 2019-12-20 | 6.37 | $36,672 | expired worthless | $36,672 |  | $0 | $1,885,534 |
+| 2019-12-20 | 2020-03-20 | 5.75 | $27,876 | in the money, loss |  | -$167,896 | -$167,896 | $1,717,638 |
+| 2020-03-20 | 2020-06-19 | 16.71 | $275,608 | expired worthless | $275,608 |  | $0 | $1,993,246 |
+| 2020-06-19 | 2020-09-18 | 5.00 | $60,586 | expired worthless | $60,586 |  | $0 | $2,053,832 |
+| 2020-09-18 | 2020-12-18 | 4.58 | $76,484 | expired worthless | $76,484 |  | $0 | $2,130,316 |
+| 2020-12-18 | 2021-03-19 | 3.93 | $54,945 | expired worthless | $54,945 |  | $0 | $2,185,262 |
+| 2021-03-19 | 2021-06-18 | 3.89 | $62,555 | expired worthless | $62,555 |  | $0 | $2,247,816 |
+| 2021-06-18 | 2021-09-17 | 3.56 | $42,458 | expired worthless | $42,458 |  | $0 | $2,290,274 |
+| 2021-09-17 | 2021-12-17 | 3.27 | $42,425 | expired worthless | $42,425 |  | $0 | $2,332,699 |
+| 2021-12-17 | 2022-03-18 | 3.17 | $54,588 | in the money, loss |  | -$31,353 | -$31,353 | $2,301,347 |
+| 2022-03-18 | 2022-06-17 | 5.48 | $85,503 | in the money, loss |  | -$258,974 | -$290,327 | $2,042,373 |
+| 2022-06-17 | 2022-09-16 | 10.17 | $157,029 | expired worthless | $157,029 |  | -$133,297 | $2,199,402 |
+| 2022-09-16 | 2022-12-16 | 11.13 | $162,269 | in the money, still a profit | $8,927 |  | -$124,370 | $2,208,329 |
+| 2022-12-16 | 2023-03-17 | 11.56 | $138,201 | expired worthless | $138,201 |  | $0 | $2,346,530 |
+| 2023-03-17 | 2023-06-16 | 3.96 | $53,025 | expired worthless | $53,025 |  | $0 | $2,399,555 |
+| 2023-06-16 | 2023-09-15 | 3.28 | $40,034 | in the money, still a profit | $36,917 |  | $0 | $2,436,472 |
+| 2023-09-15 | 2023-12-15 | 3.25 | $35,608 | expired worthless | $35,608 |  | $0 | $2,472,080 |
+| 2023-12-15 | 2024-03-15 | 2.97 | $30,174 | expired worthless | $30,174 |  | $0 | $2,502,254 |
+| 2024-03-15 | 2024-06-21 | 2.77 | $37,500 | expired worthless | $37,500 |  | $0 | $2,539,754 |
+| 2024-06-21 | 2024-09-20 | 2.51 | $31,375 | in the money, still a profit | $24,715 |  | $0 | $2,564,469 |
+| 2024-09-20 | 2024-12-20 | 2.50 | $39,779 | expired worthless | $39,779 |  | $0 | $2,604,248 |
+| 2024-12-20 | 2025-03-21 | 2.33 | $39,534 | in the money, loss |  | -$40,707 | -$40,707 | $2,563,541 |
+| 2025-03-21 | 2025-06-20 | 5.00 | $81,722 | expired worthless | $81,722 |  | $0 | $2,645,263 |
+| 2025-06-20 | 2025-09-19 | 2.29 | $40,927 | expired worthless | $40,927 |  | $0 | $2,686,191 |
+| 2025-09-19 | 2025-12-19 | 2.01 | $36,933 | expired worthless | $36,933 |  | $0 | $2,723,123 |
+| 2025-12-19 | 2026-03-20 | 1.96 | $37,322 | in the money, loss |  | -$26,460 | -$26,460 | $2,696,663 |
+| 2026-03-20 | 2026-06-18 | 3.13 | $78,461 | expired worthless | $78,461 |  | $0 | $2,775,124 |
+| 2026-06-18 | 2026-09-18 | 1.63 | $54,657 | in the money, still a profit | $22,325 |  | $0 | $2,797,449 |
+| 2026-09-18 | 2026-12-18 | 1.67 | $39,348 | open (marked to market) |  | -$33,928 | -$33,928 | $2,763,521 |
+
+CSV: [`results/usd_ledger_2008_dd50_recover.csv`](../results/usd_ledger_2008_dd50_recover.csv) (fixed-size version: `usd_ledger_2008_dd50_fixed.csv`).
+
+## 10. Limitations
 
 * Premiums are reconstructed from VXN/VIX, not traded quotes. Error is probably ±10% of premium, and larger before 2001 (VXN proxy) and before 1990 (VXO-based). NQ options did not exist before ~1999-2000; earlier years are a hypothetical on the index.
 * Settlement uses the expiry-day close. Real quarterly NQ options settle to the Friday-morning SOQ, and early exercise of American-style quarterlies is ignored.
@@ -229,7 +351,7 @@ Check these against live quotes before trading. The model ignores the current sk
 * Returns are excess of cash: collateral would also earn T-bill interest (~3% avg). Taxes are ignored.
 * Margin is approximate. SPAN margin can jump in a crash, and that is exactly when the martingale needs more of it.
 
-## 10. Reproduce
+## 11. Reproduce
 
 ```bash
 pip install -r requirements.txt
