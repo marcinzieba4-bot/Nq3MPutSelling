@@ -572,6 +572,47 @@ def _h5_section(h5: dict) -> list[str]:
       f"{cm[(cm.variant == 'Hedge from -5% to expiry') & (cm.start_year == 1990)].calmar.min():.2f}-"
       f"{cm[(cm.variant == 'Hedge from -5% to expiry') & (cm.start_year == 1990)].calmar.max():.2f}.\n")
     L.extend(_reinvest_section(h5["reinvest"]))
+    L.extend(_improve_section(h5["improve"]))
+    return L
+
+
+def _improve_section(im: pd.DataFrame) -> list[str]:
+    L: list[str] = []
+    w = L.append
+    w("### 9.4 Can it be improved? Calls, extra puts, switching to stocks\n")
+    w("Baseline: the -5% hedge kept to expiry, base = 1x a $100k account, reinvesting after each series is won back. "
+      "Each idea was run with the recovery rule and at fixed size, on all three roll calendars from 2008 and from 1990 "
+      "(six tests). Calls are sold at the stated % above the futures price, same expiry, and are not hedged; the switch "
+      "ideas hold long NQ futures (1x the base, optionally with a put 10% below) instead of selling puts until the "
+      "drawdown is back within half the trigger.\n")
+    pct = lambda v: f"{100 * v:.0f}%"
+    for sz in ("Fixed size", "Recovery rule"):
+        x = im[im.sizing == sz][["label", "calmar_2008_mar", "calmar_median", "cagr_median", "worst_drawdown",
+                                 "wiped_out_tests"]].copy()
+        x.columns = ["Idea", "Calmar, 2008", "Calmar, median of 6", "CAGR, median of 6", "Worst drawdown",
+                     "Tests wiped out"]
+        w(f"**{sz}:**\n")
+        w(_md_table(x, {"Calmar, 2008": lambda v: f"{v:.2f}", "Calmar, median of 6": lambda v: f"{v:.2f}",
+                        "CAGR, median of 6": lambda v: f"{100 * v:.1f}%", "Worst drawdown": pct,
+                        "Tests wiped out": lambda v: f"{int(v)} of 6"}) + "\n")
+    b = im.set_index(["idea", "sizing"])
+    w(f"* **Selling calls makes it worse.** The Nasdaq-100 rises too often and too far: in rallies such as 1999 and "
+      f"2020 the short calls lose, and the recovery rule then upsizes. Median Calmar falls from "
+      f"{b.loc[('base', 'Fixed size'), 'calmar_median']:.2f} to {b.loc[('call10', 'Fixed size'), 'calmar_median']:.2f} "
+      f"(10% calls, fixed size), and some tests are wiped out.")
+    w(f"* **A put 20% below is the only small gain, and only at fixed size:** worst drawdown "
+      f"{pct(b.loc[('base', 'Fixed size'), 'worst_drawdown'])} to {pct(b.loc[('put20', 'Fixed size'), 'worst_drawdown'])}, "
+      f"median Calmar {b.loc[('base', 'Fixed size'), 'calmar_median']:.2f} to {b.loc[('put20', 'Fixed size'), 'calmar_median']:.2f}, "
+      f"for less growth (median CAGR {100 * b.loc[('base', 'Fixed size'), 'cagr_median']:.1f}% to "
+      f"{100 * b.loc[('put20', 'Fixed size'), 'cagr_median']:.1f}%). With the recovery rule it lowers the premium, so "
+      "sizes grow and the worst drawdown gets deeper.")
+    w("* **Switching to stocks after a 40% account drawdown never fires at fixed size** (its worst drawdown is "
+      f"{pct(b.loc[('base', 'Fixed size'), 'worst_drawdown'])}). With the recovery rule it fires only in the 1990 tests, "
+      "in the middle of the dot-com crash, and the long position wiped out the account in 2001-02.")
+    w("* **Switching to stocks after the market falls 40% (from its 52-week high)** buys too early in a long bear "
+      "market: it helped a little after 2008-09 but wiped out two of the three 1990 tests in 2001-02, protective put "
+      "or not. The -5% hedge is already delta-neutral in a crash; going long re-adds the risk it removed.")
+    w("* Full results: [`results/improvement_study.csv`](../results/improvement_study.csv).\n")
     return L
 
 

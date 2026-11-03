@@ -486,6 +486,50 @@ Account of $100k, base trade = puts on 1x the account. With reinvesting, every t
 * At fixed size, reinvesting leaves the median Calmar unchanged; the drawdowns grow in proportion to the growth.
 * Full grid (leverage 0.5x-2x, naked put too): [`results/reinvest_study.csv`](../results/reinvest_study.csv).
 
+### 9.4 Can it be improved? Calls, extra puts, switching to stocks
+
+Baseline: the -5% hedge kept to expiry, base = 1x a $100k account, reinvesting after each series is won back. Each idea was run with the recovery rule and at fixed size, on all three roll calendars from 2008 and from 1990 (six tests). Calls are sold at the stated % above the futures price, same expiry, and are not hedged; the switch ideas hold long NQ futures (1x the base, optionally with a put 10% below) instead of selling puts until the drawdown is back within half the trigger.
+
+**Fixed size:**
+
+| Idea | Calmar, 2008 | Calmar, median of 6 | CAGR, median of 6 | Worst drawdown | Tests wiped out |
+|---|---|---|---|---|---|
+| -5% hedge (baseline) | 0.40 | 0.17 | 4.1% | 34% | 0 of 6 |
+| + sell call 5% above | 0.00 | 0.02 | 1.0% | 100% | 1 of 6 |
+| + sell call 10% above | 0.08 | 0.08 | 3.2% | 100% | 1 of 6 |
+| + buy put 15% below | 0.39 | 0.15 | 2.8% | 25% | 0 of 6 |
+| + buy put 20% below | 0.39 | 0.19 | 3.4% | 28% | 0 of 6 |
+| + sell call 10% above, buy put 20% below | 0.04 | 0.06 | 2.1% | 100% | 1 of 6 |
+| after a 40% drawdown: long NQ + put 10% below | 0.40 | 0.17 | 4.1% | 34% | 0 of 6 |
+| after a 40% drawdown: long NQ, no put | 0.40 | 0.17 | 4.1% | 34% | 0 of 6 |
+| after a 25% drawdown: long NQ + put 10% below | 0.40 | 0.17 | 4.0% | 98% | 0 of 6 |
+| NQ 40% below its 52-week high: long NQ + put 10% below | 0.27 | 0.09 | 4.0% | 100% | 2 of 6 |
+| NQ 40% below its 52-week high: long NQ, no put | 0.28 | 0.10 | 4.3% | 100% | 2 of 6 |
+| NQ 30% below its 52-week high: long NQ + put 10% below | 0.24 | 0.09 | 4.3% | 100% | 2 of 6 |
+
+**Recovery rule:**
+
+| Idea | Calmar, 2008 | Calmar, median of 6 | CAGR, median of 6 | Worst drawdown | Tests wiped out |
+|---|---|---|---|---|---|
+| -5% hedge (baseline) | 0.44 | 0.20 | 9.3% | 85% | 0 of 6 |
+| + sell call 5% above | 0.07 | -0.45 | -47.6% | 100% | 3 of 6 |
+| + sell call 10% above | 0.12 | 0.09 | 7.0% | 100% | 2 of 6 |
+| + buy put 15% below | 0.36 | 0.15 | 6.8% | 94% | 0 of 6 |
+| + buy put 20% below | 0.39 | 0.17 | 7.6% | 95% | 0 of 6 |
+| + sell call 10% above, buy put 20% below | 0.08 | 0.08 | 5.9% | 100% | 1 of 6 |
+| after a 40% drawdown: long NQ + put 10% below | 0.44 | 0.20 | 9.3% | 100% | 2 of 6 |
+| after a 40% drawdown: long NQ, no put | 0.44 | 0.20 | 9.3% | 100% | 2 of 6 |
+| after a 25% drawdown: long NQ + put 10% below | 0.44 | 0.16 | 7.8% | 100% | 2 of 6 |
+| NQ 40% below its 52-week high: long NQ + put 10% below | 0.40 | 0.16 | 8.7% | 100% | 2 of 6 |
+| NQ 40% below its 52-week high: long NQ, no put | 0.41 | -0.36 | -45.3% | 100% | 3 of 6 |
+| NQ 30% below its 52-week high: long NQ + put 10% below | 0.34 | 0.15 | 8.4% | 100% | 2 of 6 |
+
+* **Selling calls makes it worse.** The Nasdaq-100 rises too often and too far: in rallies such as 1999 and 2020 the short calls lose, and the recovery rule then upsizes. Median Calmar falls from 0.17 to 0.08 (10% calls, fixed size), and some tests are wiped out.
+* **A put 20% below is the only small gain, and only at fixed size:** worst drawdown 34% to 28%, median Calmar 0.17 to 0.19, for less growth (median CAGR 4.1% to 3.4%). With the recovery rule it lowers the premium, so sizes grow and the worst drawdown gets deeper.
+* **Switching to stocks after a 40% account drawdown never fires at fixed size** (its worst drawdown is 34%). With the recovery rule it fires only in the 1990 tests, in the middle of the dot-com crash, and the long position wiped out the account in 2001-02.
+* **Switching to stocks after the market falls 40% (from its 52-week high)** buys too early in a long bear market: it helped a little after 2008-09 but wiped out two of the three 1990 tests in 2001-02, protective put or not. The -5% hedge is already delta-neutral in a crash; going long re-adds the risk it removed.
+* Full results: [`results/improvement_study.csv`](../results/improvement_study.csv).
+
 ## 10. Limitations
 
 * Premiums are reconstructed from VXN/VIX, not traded quotes. Error is probably ±10% of premium, and larger before 2001 (VXN proxy) and before 1990 (VXO-based). NQ options did not exist before ~1999-2000; earlier years are a hypothetical on the index.

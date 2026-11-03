@@ -20,7 +20,7 @@ from dataclasses import dataclass, field
 import numpy as np
 import pandas as pd
 
-from .black76 import put_delta, put_price
+from .black76 import call_delta, call_price, put_delta, put_price
 from .volmodel import VolParams, atm_vol_for_tau, strike_vol
 
 NQ_MULT = 20.0  # $ per index point for one NQ future / option
@@ -43,7 +43,8 @@ class Structure:
     name: str
     long_otm: float | None = None      # long put strike = K_short * (1 - long_otm); None = naked
     short_moneyness: float = 0.0       # K_short = F0 * (1 - short_moneyness); 0 = ATM
-    kind: str = "short_put"            # short_put | long_futures (benchmark)
+    kind: str = "short_put"            # short_put | long_futures (benchmark) | protected_long
+    short_call_otm: float | None = None  # also sell a call at F0 * (1 + short_call_otm), same expiry
 
 
 @dataclass(frozen=True)
@@ -152,6 +153,11 @@ def _option_path(c: Cycle, K: float, vp: VolParams):
     return V, D, sig
 
 
+def _call_path(c: Cycle, K: float, vp: VolParams):
+    sig = strike_vol(c.atm, c.F, K, c.tau, vp)
+    return call_price(c.F, K, c.tau, c.r, sig), call_delta(c.F, K, c.tau, c.r, sig), sig
+
+
 # ----------------------------------------------------------------------------- unit paths
 @dataclass
 class UnitCycle:
@@ -171,6 +177,22 @@ def unit_cycle(c: Cycle, st: Structure, hd: Hedge, mp: MarketParams, vp: VolPara
         pnl[1:] = np.diff(c.F)
         pnl[0] -= F0 * mp.fut_cost_bp / 1e4
         return UnitCycle(c, pnl / F0, 0.0, {"S_T": c.S[-1]}, margin_frac=mp.margin_naked, premium_frac=0.0)
+    if st.kind == "protected_long":   # long 1 future + (optionally) a long put at F0 * (1 - long_otm)
+        pnl = np.zeros(n)
+        pnl[1:] = np.diff(c.F)
+        pnl[0] -= F0 * mp.fut_cost_bp / 1e4
+        cost = 0.0
+        info = {"S_T": c.S[-1]}
+        if st.long_otm is not None:
+            K2 = F0 * (1 - st.long_otm)
+            V2, _, sig2 = _option_path(c, K2, vp)
+            ask2 = put_price(F0, K2, c.tau[0], c.r[0], sig2[0] + mp.opt_slip_vol)
+            cost = ask2 + mp.opt_comm_pts
+            pnl[0] += V2[0] - cost
+            pnl[1:] += np.diff(V2)
+            info.update({"K2": K2, "put_cost": cost})
+        info.update({"payoff": 0.0, "hedge_pnl": 0.0, "hedge_cost": 0.0, "credit": -cost, "pnl_pts": pnl.sum()})
+        return UnitCycle(c, pnl / F0, -cost, info, margin_frac=mp.margin_naked, premium_frac=-cost / F0)
 
     K1 = F0 * (1 - st.short_moneyness)
     V1, D1, sig1 = _option_path(c, K1, vp)
@@ -191,6 +213,15 @@ def unit_cycle(c: Cycle, st: Structure, hd: Hedge, mp: MarketParams, vp: VolPara
         margin_frac = min(mp.margin_naked, max(max_loss, 0.0) / F0)
     else:
         margin_frac = mp.margin_naked
+    if st.short_call_otm is not None:     # short call on top: a short strangle (one side can lose at a time)
+        K3 = F0 * (1 + st.short_call_otm)
+        V3, D3, sig3 = _call_path(c, K3, vp)
+        bid3 = call_price(F0, K3, c.tau[0], c.r[0], max(sig3[0] - mp.opt_slip_vol, vp.vol_floor))
+        credit += bid3 - mp.opt_comm_pts
+        mtm -= V3
+        dport -= D3
+        info.update({"K3": K3, "iv3": sig3[0], "prem3_mid": V3[0], "prem3_bid": bid3})
+        margin_frac = max(margin_frac, mp.margin_naked)
 
     # --- futures delta hedge (position held from close t to close t+1) ---
     h = np.zeros(n)

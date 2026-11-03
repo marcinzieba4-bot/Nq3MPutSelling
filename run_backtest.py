@@ -131,6 +131,10 @@ def main() -> None:
     rs = A.reinvest_study(df, vp, mp)
     rs.round(4).to_csv(RES / "reinvest_study.csv", index=False)
     h5["reinvest"] = rs
+    imp = A.improvement_study(df, vp, mp)
+    imp.round(4).to_csv(RES / "improvement_study.csv", index=False)
+    h5["improve"] = A.improvement_summary(imp)
+    h5["improve"].round(4).to_csv(RES / "improvement_summary.csv", index=False)
     camp["h5"] = h5
 
     if not args.no_report:

@@ -814,3 +814,118 @@ def reinvest_study(df: pd.DataFrame, vp: VolParams, mp: MarketParams, capital: f
                                          "start_year": int(st_[:4]), "calendar": cname, "base_x_account": bf,
                                          "reinvest": reinvest, **{k: v for k, v in r.items() if k not in ("daily", "cycles")}})
     return pd.DataFrame(rows)
+
+
+# ----------------------------------------------------------------------------- improvement ideas for the -5% hedge
+def run_switch(units: list[UnitCycle], recover: bool, capital: float, base_frac: float, reinvest: bool,
+               alt_units: list[UnitCycle] | None = None, dd_on: float = np.inf, dd_off: float = 0.0,
+               market_dd: list[float] | None = None) -> dict:
+    """Like run_reinvest, plus a regime switch: when the account is more than `dd_on` below its high at a roll,
+    hold `alt_units` (e.g. long NQ futures + a protective put, 1x the base, no recovery sizing) until the
+    drawdown is back within `dd_off`; then resume selling puts (recovery sizing picks up the remaining loss)."""
+    E = hwm = capital
+    base = base_frac * capital
+    pieces, rows, ruined, mode = [], [], None, "puts"
+    for i, u in enumerate(units):
+        c = u.cycle
+        dd = (hwm - E) / hwm if hwm > 0 else 0.0
+        if market_dd is not None:      # switch on the Nasdaq-100's own drawdown instead of the account's
+            dd = market_dd[i]
+        if alt_units is not None:
+            if mode == "puts" and dd > dd_on:
+                mode = "alt"
+            elif mode == "alt" and dd <= dd_off:
+                mode = "puts"
+        if reinvest and E >= hwm - 1e-6:
+            base = base_frac * E
+        if mode == "alt":
+            uu, m = alt_units[i], 1.0
+        else:
+            uu = u
+            deficit = max(0.0, hwm - E)
+            m = 1.0 + deficit / (base * max(u.premium_frac, 1e-4)) if recover else 1.0
+        m = max(0.0, min(m, E / (base * uu.margin_frac) if E > 0 else 0.0))
+        eq = E + np.cumsum(m * base * uu.ret)
+        if (eq <= 0).any():
+            k = int(np.argmax(eq <= 0))
+            eq, ruined = eq[: k + 1], c.dates[k]
+        pieces.append(pd.Series(eq, index=c.dates[: len(eq)]))
+        rows.append({"entry": c.entry, "expiry": c.expiry, "open": c.open, "mode": mode, "base": base, "mult": m,
+                     "equity": eq[-1]})
+        E = eq[-1]
+        if not c.open:
+            hwm = max(hwm, E)
+        if ruined is not None:
+            break
+    daily = pd.concat(pieces).groupby(level=0).last()
+    cyc = pd.DataFrame(rows)
+    last = cyc.loc[~cyc.open, "expiry"].max() if ruined is None else ruined
+    d = daily[daily.index <= last]
+    yrs = (d.index[-1] - d.index[0]).days / 365.25
+    final = float(d.iloc[-1])
+    cagr = (final / capital) ** (1 / yrs) - 1 if final > 0 else -1.0
+    dd_pct = float(((d.cummax() - d) / d.cummax()).max())
+    return {"final_equity": final, "cagr": cagr, "max_dd_pct": dd_pct, "calmar": cagr / dd_pct if dd_pct > 0 else np.nan,
+            "alt_quarters": int((cyc["mode"] == "alt").sum()), "max_mult": float(cyc.mult.max()),
+            "ruined": str(ruined.date()) if ruined is not None else "", "cycles": cyc, "daily": d}
+
+
+IMPROVEMENTS = [
+    # id, label, structure, hedge, switch (alt structure, dd_on, dd_off) or None
+    ("base", "-5% hedge (baseline)", NAKED, H5_LATCH, None),
+    ("call5", "+ sell call 5% above", Structure("put + call 5%", short_call_otm=0.05), H5_LATCH, None),
+    ("call10", "+ sell call 10% above", Structure("put + call 10%", short_call_otm=0.10), H5_LATCH, None),
+    ("put15", "+ buy put 15% below", Structure("put spread -15%", long_otm=0.15), H5_LATCH, None),
+    ("put20", "+ buy put 20% below", Structure("put spread -20%", long_otm=0.20), H5_LATCH, None),
+    ("call10_put20", "+ sell call 10% above, buy put 20% below",
+     Structure("put + call 10% + put -20%", long_otm=0.20, short_call_otm=0.10), H5_LATCH, None),
+    ("switch40_put", "after a 40% drawdown: long NQ + put 10% below", NAKED, H5_LATCH,
+     (Structure("long NQ + put -10%", long_otm=0.10, kind="protected_long"), 0.40, 0.20)),
+    ("switch40_bare", "after a 40% drawdown: long NQ, no put", NAKED, H5_LATCH,
+     (Structure("long NQ", kind="protected_long"), 0.40, 0.20)),
+    ("switch25_put", "after a 25% drawdown: long NQ + put 10% below", NAKED, H5_LATCH,
+     (Structure("long NQ + put -10%", long_otm=0.10, kind="protected_long"), 0.25, 0.10)),
+    ("mkt40_put", "NQ 40% below its 52-week high: long NQ + put 10% below", NAKED, H5_LATCH,
+     (Structure("long NQ + put -10%", long_otm=0.10, kind="protected_long"), 0.40, 0.20, "market")),
+    ("mkt40_bare", "NQ 40% below its 52-week high: long NQ, no put", NAKED, H5_LATCH,
+     (Structure("long NQ", kind="protected_long"), 0.40, 0.20, "market")),
+    ("mkt30_put", "NQ 30% below its 52-week high: long NQ + put 10% below", NAKED, H5_LATCH,
+     (Structure("long NQ + put -10%", long_otm=0.10, kind="protected_long"), 0.30, 0.15, "market")),
+]
+
+
+def improvement_study(df: pd.DataFrame, vp: VolParams, mp: MarketParams, capital: float = 100_000.0,
+                      base_frac: float = 1.0, reinvest: bool = True, starts=("2008-01-01", "1990-01-01")) -> pd.DataFrame:
+    rows = []
+    for cname, (months, cstart) in CALENDARS.items():
+        ctx = Context(df, vp, replace(mp, capital=capital, base_notional=capital), months, cstart)
+        ndx_peak = df.ndx.rolling(252, min_periods=1).max()   # the market's drawdown from its 52-week high
+        for vid, label, st, hd, sw in IMPROVEMENTS:
+            main_all = ctx.units(st, hd)
+            alt_all = ctx.units(sw[0], NO_HEDGE) if sw else None
+            mkt_all = [1 - df.ndx.loc[u.cycle.entry] / ndx_peak.loc[u.cycle.entry] for u in main_all]
+            for st_ in starts:
+                keep = [i for i, u in enumerate(main_all) if u.cycle.entry >= pd.Timestamp(st_)]
+                units = [main_all[i] for i in keep]
+                alt = [alt_all[i] for i in keep] if sw else None
+                mkt = [mkt_all[i] for i in keep] if (sw and len(sw) > 3 and sw[3] == "market") else None
+                for recover in (True, False):
+                    r = run_switch(units, recover, capital, base_frac, reinvest, alt,
+                                   sw[1] if sw else np.inf, sw[2] if sw else 0.0, mkt)
+                    rows.append({"idea": vid, "label": label, "sizing": "Recovery rule" if recover else "Fixed size",
+                                 "start_year": int(st_[:4]), "calendar": cname,
+                                 **{k: v for k, v in r.items() if k not in ("cycles", "daily")}})
+    return pd.DataFrame(rows)
+
+
+
+def improvement_summary(t: pd.DataFrame) -> pd.DataFrame:
+    """One row per idea and sizing: medians across the six tests, worst drawdown and wipe-outs."""
+    rows = []
+    for (idea, sizing), g in t.groupby(["idea", "sizing"], sort=False):
+        rows.append({"idea": idea, "label": g.label.iloc[0], "sizing": sizing,
+                     "calmar_2008_mar": float(g[(g.start_year == 2008) & (g.calendar == "Mar/Jun/Sep/Dec")].calmar.iloc[0]),
+                     "calmar_median": float(g.calmar.median()), "cagr_median": float(g.cagr.median()),
+                     "worst_drawdown": float(min(g.max_dd_pct.max(), 1.0)),
+                     "wiped_out_tests": int((g.ruined.fillna("").astype(str) != "").sum()), "tests": len(g)})
+    return pd.DataFrame(rows)

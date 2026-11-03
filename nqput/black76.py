@@ -35,3 +35,28 @@ def put_delta(F, K, T, r, sigma):
         d1 = (np.log(Fl / Kl) + 0.5 * sq ** 2) / sq
         out[live] = -np.exp(-r[live] * Tl) * ndtr(-d1)
     return float(out[0]) if scalar else out
+
+
+def call_price(F, K, T, r, sigma):
+    (F, K, T, r, sigma), scalar = _prep(F, K, T, r, sigma)
+    out = np.maximum(F - K, 0.0)
+    live = T > 1e-10
+    if live.any():
+        Fl, Kl, Tl, sl = F[live], K[live], T[live], sigma[live]
+        sq = sl * np.sqrt(Tl)
+        d1 = (np.log(Fl / Kl) + 0.5 * sq ** 2) / sq
+        out[live] = np.exp(-r[live] * Tl) * (Fl * ndtr(d1) - Kl * ndtr(d1 - sq))
+    return float(out[0]) if scalar else out
+
+
+def call_delta(F, K, T, r, sigma):
+    """dV/dF of a call (positive); at expiry 1 if ITM else 0."""
+    (F, K, T, r, sigma), scalar = _prep(F, K, T, r, sigma)
+    out = np.where(F > K, 1.0, 0.0)
+    live = T > 1e-10
+    if live.any():
+        Fl, Kl, Tl, sl = F[live], K[live], T[live], sigma[live]
+        sq = sl * np.sqrt(Tl)
+        d1 = (np.log(Fl / Kl) + 0.5 * sq ** 2) / sq
+        out[live] = np.exp(-r[live] * Tl) * ndtr(d1)
+    return float(out[0]) if scalar else out
