@@ -1,0 +1,8 @@
+version,overlay,vol_vs_vxn,option_pnl,option_costs,calls_sold,total,avg_per_year,max_drawdown,dd_peak,dd_trough,calmar,yearly_mean_over_std,worst_year,losing_years
+no calls,no calls,,0.0,0.0,0,1104441.47,58639.36,-216716.68,2018-08-30,2019-10-10,0.27,0.52,-129223.46,6
+sell 20-delta 30-day calls @ 0.8 x VXN,sell 20-delta 30-day calls,0.8,-277008.22,63029.66,2014,827433.25,43931.85,-188706.07,2020-09-02,2020-11-02,0.23,0.49,-93726.44,6
+sell 20-delta 30-day calls @ 0.9 x VXN,sell 20-delta 30-day calls,0.9,-66350.64,63470.52,2014,1038090.83,55116.53,-185901.0,2020-09-02,2020-11-02,0.3,0.58,-85295.66,6
+sell 20-delta 30-day calls @ 1.0 x VXN,sell 20-delta 30-day calls,1.0,122094.04,64001.22,2014,1226535.51,65121.84,-183147.69,2020-09-02,2020-11-02,0.36,0.64,-78487.39,6
+sell 20-delta 7-day calls @ 0.8 x VXN,sell 20-delta 7-day calls,0.8,-28853.01,97410.53,4554,1075588.46,57107.44,-198844.43,2024-07-11,2025-06-19,0.29,0.54,-113134.97,6
+sell 20-delta 7-day calls @ 0.9 x VXN,sell 20-delta 7-day calls,0.9,302029.4,97529.97,4554,1406470.87,74675.35,-183451.59,2024-07-11,2025-06-19,0.41,0.65,-97133.29,6
+sell 20-delta 7-day calls @ 1.0 x VXN,sell 20-delta 7-day calls,1.0,593338.48,97741.54,4554,1697779.95,90142.16,-169149.51,2024-07-11,2025-06-19,0.53,0.73,-81902.64,6

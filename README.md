@@ -60,6 +60,20 @@ Robustness across all roll calendars and a 1990 start: [`results/recovery_varian
 
 Once NQ closes 5% below the strike, the put is delta-hedged with NQ futures every day until expiry (more futures if NQ keeps falling, bought back as it rises; never net short). Per $100k at fixed size since 2008: in the 10 quarters where NQ then rebounded above the strike, the hedge cost -$71,312 (sell low, buy back high); in the 11 quarters where NQ stayed down it saved $51,248; net -$55,488, the price of the protection. At the same worst-day loss, a bigger fixed size beat the recovery rule in 4 of 6 tests ([`results/h5_equal_risk.csv`](results/h5_equal_risk.csv)); report section 9.2 has the full breakdown. Calmar ratio (annual P&L / max drawdown) from 2008: 0.42 with the recovery rule, 0.40 at fixed size (naked put 0.12 / 0.19); median across all calendars and starts about 0.2 ([`results/calmar_by_test.csv`](results/calmar_by_test.csv)). Reinvesting after each fully won-back series (base = 1x account): standard Calmar (CAGR / max % drawdown) from 2008 rises from 0.28 to 0.44 with the recovery rule (CAGR 5.9% to 10.4%), but from 1990 the worst drawdown grows to 58-85% ([`results/reinvest_study.csv`](results/reinvest_study.csv), report section 9.3). Tried improvements (report section 9.4, [`results/improvement_summary.csv`](results/improvement_summary.csv)): selling OTM calls, buying a -15%/-20% put, and switching to long NQ after a 40% account or market drawdown. None beat the baseline across the six tests; a -20% put at fixed size trimmed the worst drawdown (34% to 28%) for less growth.
 
+### Combined with the NQ pyramid strategy (one account)
+
+The pyramid strategy from the `NQPyramidingUP` repo (70% recovery entries, +20% reset, weekly 20-delta calls) is long NQ only while the market rallies, and sits flat after a fall, when these puts need the most capital. Both are measured per $100k unit, never reinvested, on daily closes from 20 Mar 2008 to 2 Nov 2026. Calmar of one pyramid unit plus k units of the -5%-hedged puts with the recovery rule:
+
+| Put units per pyramid unit | 0 | 1 | 2 | 3 | ~4.75 (best) |
+|---|---:|---:|---:|---:|---:|
+| Profit per year | $75,535 | $85,366 | $95,197 | $105,028 | $122,233 |
+| Worst drawdown | -$173,862 | -$181,396 | -$189,962 | -$199,658 | -$217,019 |
+| Calmar | 0.43 | 0.47 | 0.50 | 0.53 | 0.56 |
+| Peak capital in use, one account | $208,270 | $242,241 | $295,241 | $384,123 | $540,400 |
+| Same, two separate accounts | $208,270 | $297,601 | $386,931 | $476,262 | $632,591 |
+
+Fixed-size puts barely move Calmar (0.44 to 0.46). Near its 52-week high the pyramid holds about $556k of NQ per unit, but only $88-150k once NDX is 5% or more below it. So one account needs 19-24% less capital than two, though profit per dollar of peak capital does not improve (36% alone, 35% / 32% combined). Both lost together in choppy corrections (2010, 2015-16, 2025), but not in the long bear markets (2008, 2022), when the pyramid sat flat. Report section 10, [`results/combo_pyramid_mix.csv`](results/combo_pyramid_mix.csv), and the daily series of both strategies in [`results/combo_pyramid_daily.csv`](results/combo_pyramid_daily.csv). The pyramid inputs are in `data/external/nqpyramidingup/`.
+
 ## Run it
 
 ```bash
@@ -77,6 +91,7 @@ PYTHONPATH=. python tests/test_engine.py   # engine sanity checks (or: python -m
 | `nqput/black76.py` | Black-76 pricing for options on futures |
 | `nqput/backtest.py` | engine: quarterly cycles, unit P&L paths, hedging, sizing rules, metrics |
 | `nqput/analysis.py` | strategy grid, premium tables, start-year / calendar / sensitivity studies |
+| `nqput/combo.py` | combination with the NQ pyramid strategy (inputs in `data/external/nqpyramidingup/`) |
 | `nqput/report.py` | charts and `reports/REPORT.md` |
 | `results/` | all output tables (CSV/JSON): every roll's premium, 200+ strategy variants, robustness |
 | `tests/` | synthetic-data checks (delta-hedged P&L ≈ vega × (IV − RV), payoff identity, sizing rule) |

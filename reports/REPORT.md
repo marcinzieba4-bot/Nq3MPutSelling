@@ -13,6 +13,7 @@
 7. **Today (2026-11-02).** The 3-month put sold 2026-09-18 (strike ~29,888, premium ~1,206 pts = $24,112/NQ) is **in the money**. NQ is about 28,106, the put is worth ~2,190 pts, and the mark-to-market P&L is ~-1,014 pts (-$20,281 per NQ). It has 46 days left and delta ~0.72. Under your rule, a loss at the 18-Dec expiry would trigger a bigger position. The backtest says roll at normal size, because today's rich premium already does part of the recovery.
 
 8. **From 2008, winning back every loss in one quarter (section 9).** On $100k of base notional, not reinvested: a normal quarter that expires OTM pays about $4,216; total P&L $242,680 (fixed size: $151,765). The worst cumulated loss was -$53,140 at an expiry and -$104,425 inside a quarter, holding up to 7.9x size ($793,846 of notional).
+9. **Combined with the NQ pyramid strategy in one account (section 10).** Per $100k pyramid unit plus 1-2 put units (-5% hedge, recovery rule): Calmar 0.43 alone, 0.47-0.50 combined, with $85,366-$95,197 a year instead of $75,535. The pyramid holds little NQ when the market is down, so one account needs 19-24% less capital than two. Profit per dollar of peak capital does not improve (36% alone, 35% and 32% combined), and in choppy corrections (2010, 2015-16, 2025) both lose together.
 
 ## 1. What was tested
 
@@ -530,7 +531,113 @@ Baseline: the -5% hedge kept to expiry, base = 1x a $100k account, reinvesting a
 * **Switching to stocks after the market falls 40% (from its 52-week high)** buys too early in a long bear market: it helped a little after 2008-09 but wiped out two of the three 1990 tests in 2001-02, protective put or not. The -5% hedge is already delta-neutral in a crash; going long re-adds the risk it removed.
 * Full results: [`results/improvement_study.csv`](../results/improvement_study.csv).
 
-## 10. Limitations
+## 10. Combined with the NQ pyramid strategy (one account)
+
+The pyramid study (repo NQPyramidingUP, its chosen version: buy when NQ has recovered 70% of a 5% pullback, add a unit every +1% with a 1% stop on each, sell everything at +20%, and sell 20-delta 7-day calls against every contract) is long only while NQ rallies. After a fall it is stopped out and sits flat, so it needs little capital exactly when the puts here need the most. In one account, one strategy's spare capital can carry the other's need.
+
+Both are measured the same way: US dollars per $100k unit, never reinvested, daily closes, 20 Mar 2008 to 02 Nov 2026 (18.6 years). The puts are the ATM put with the delta hedge from -5% kept to expiry (section 9.2), with the recovery rule or at fixed size. **Calmar** = average profit per year / worst drawdown. **Capital in use** = margin (pyramid: 5.5% of the NQ held, about $3k per MNQ; puts: 10% of the put notional) + the drawdown from the high. In one account the margins add up, but the drawdown is that of the combined P&L.
+
+| Alone, per $100k unit | Profit per year | Worst drawdown | Low point | Calmar | Peak capital in use | Profit / peak capital |
+|---|---|---|---|---|---|---|
+| Pyramid + weekly calls | $75,535 | -$173,862 | 2025-05-23 | 0.43 | $208,270 | 36% |
+| Pyramid, no calls | $59,314 | -$211,200 | 2019-10-09 | 0.28 | $236,707 | 25% |
+| Puts, recovery rule (-5% hedge) | $9,831 | -$24,193 | 2016-01-20 | 0.41 | $89,331 | 11% |
+| Puts, fixed size (-5% hedge) | $4,988 | -$13,025 | 2009-01-20 | 0.38 | $23,025 | 22% |
+
+The pyramid's figures come from its daily equity curve from 20 Mar 2008, so its worst drawdown here (-$173,862) is a little smaller than in its own intraday report (-$183,452), and Calmar is 0.43 instead of 0.41.
+
+The puts' Calmar differs slightly from section 9.2 (0.42 / 0.40): same worst drawdown, but this window ends on 02 Nov 2026, the pyramid data's last day.
+
+**One pyramid unit plus k put units** (each $100k):
+
+| Mix | Put units | Profit per year | Worst drawdown | Low point | Calmar | Peak capital, one account | Peak capital, two accounts | Profit / peak capital |
+|---|---|---|---|---|---|---|---|---|
+| Pyramid + weekly calls + puts, recovery rule | 1 | $85,366 | -$181,396 | 2025-05-23 | 0.47 | $242,241 | $297,601 | 35% |
+| Pyramid + weekly calls + puts, recovery rule | 2 | $95,197 | -$189,962 | 2025-04-10 | 0.50 | $295,241 | $386,931 | 32% |
+| Pyramid + weekly calls + puts, recovery rule | 3 | $105,028 | -$199,658 | 2025-04-10 | 0.53 | $384,123 | $476,262 | 27% |
+| Pyramid + weekly calls + puts, recovery rule | 4.75 (best Calmar) | $122,233 | -$217,019 | 2016-05-05 | 0.56 | $540,400 | $632,591 | 23% |
+| Pyramid + weekly calls + puts, recovery rule | 7.19 (equal worst drawdown) | $146,185 | -$274,323 | 2016-01-20 | 0.53 | $757,973 | $850,235 | 19% |
+| Pyramid + weekly calls + puts, fixed size | 1 | $80,523 | -$182,676 | 2025-05-23 | 0.44 | $226,768 | $231,295 | 36% |
+| Pyramid + weekly calls + puts, fixed size | 2 | $85,511 | -$191,491 | 2025-05-23 | 0.45 | $245,266 | $254,320 | 35% |
+| Pyramid + weekly calls + puts, fixed size | 3 | $90,499 | -$201,634 | 2025-04-10 | 0.45 | $263,764 | $277,344 | 34% |
+| Pyramid + weekly calls + puts, fixed size | 15 (best Calmar) | $150,354 | -$325,887 | 2025-04-10 | 0.46 | $485,740 | $553,642 | 31% |
+| Pyramid, no calls + puts, recovery rule | 1 | $69,145 | -$199,861 | 2019-10-08 | 0.35 | $246,361 | $326,037 | 28% |
+| Pyramid, no calls + puts, recovery rule | 2 | $78,977 | -$191,025 | 2025-06-20 | 0.41 | $299,824 | $415,368 | 26% |
+| Pyramid, no calls + puts, recovery rule | 3 | $88,808 | -$199,542 | 2025-04-10 | 0.45 | $388,622 | $504,698 | 23% |
+| Pyramid, no calls + puts, recovery rule | 4.5 (best Calmar) | $103,554 | -$216,398 | 2016-05-05 | 0.48 | $521,820 | $638,694 | 20% |
+| Pyramid, no calls + puts, recovery rule | 8.73 (equal worst drawdown) | $145,137 | -$310,844 | 2016-01-20 | 0.47 | $897,413 | $1,016,538 | 16% |
+| Pyramid, no calls + puts, fixed size | 1 | $64,302 | -$205,341 | 2019-10-08 | 0.31 | $239,038 | $259,731 | 27% |
+| Pyramid, no calls + puts, fixed size | 2 | $69,290 | -$200,229 | 2019-10-08 | 0.35 | $248,557 | $282,756 | 28% |
+| Pyramid, no calls + puts, fixed size | 3 | $74,278 | -$201,981 | 2025-06-20 | 0.37 | $267,055 | $305,781 | 28% |
+| Pyramid, no calls + puts, fixed size | 15 (best Calmar) | $134,134 | -$325,771 | 2025-04-10 | 0.41 | $489,031 | $582,078 | 27% |
+
+* **Calmar rises with the recovery-rule puts:** 0.43 alone, 0.47 with 1 put unit, 0.50 with 2 and 0.53 with 3, peaking at 0.56 with about 4.75 units. Beyond that the puts dominate and Calmar slides back toward their own 0.41.
+* **Fixed-size puts barely move it** (0.44 with 1 unit, at most 0.46). They earn little per unit, and their losses fell in the same 2025 sell-off that produced the pyramid's worst drawdown.
+* **Without the weekly calls the gain is bigger:** 0.28 alone, 0.35 with 1 unit, 0.41 with 2, 0.48 at best. That version's worst drawdown (2018-19) had nothing to do with put losses.
+* **One account needs less than two separate ones:** at 1 + 2 units, $295,241 at the peak instead of $386,931 (24% less), because the two peaks came at different times.
+* **But profit per dollar of capital does not improve.** Profit / peak capital is 36% for the pyramid alone, 35% at 1 + 1, 32% at 1 + 2 and 23% at the best-Calmar mix. The recovery rule's margin is the cost: up to $66,656 per unit in 2016, when it held 6.7x size. With a 6% put margin instead of 10% it is about break-even (37% at 1 + 1, 37% at 1 + 2).
+
+**Does the pyramid free up capital when the market is down?** Daily averages per $100k unit, by how far NDX was below its 52-week high:
+
+| Market | Share of days | Pyramid: NQ held | Pyramid: margin | Puts (recovery): margin | Pyramid: capital in use | Puts (recovery): capital in use |
+|---|---|---|---|---|---|---|
+| NDX within 5% of its 52-week high | 64% | $556,466 | $30,606 | $13,795 | $75,923 | $15,006 |
+| 5-10% below | 16% | $137,286 | $7,551 | $16,208 | $82,550 | $21,162 |
+| 10-20% below | 11% | $88,194 | $4,851 | $14,926 | $66,750 | $21,063 |
+| more than 20% below | 9% | $149,915 | $8,245 | $20,768 | $23,578 | $28,536 |
+
+![Combined with the pyramid](figures/8_combined_with_pyramid.png)
+
+Worst drawdowns of each strategy, and what the other one did over the same dates:
+
+| Strategy | From | To | NDX | Drawdown | Other strategy, same dates |
+|---|---|---|---|---|---|
+| Pyramid + weekly calls | 2024-07-10 | 2025-05-23 | +1% | -$173,862 | puts (recovery) -$7,534 |
+| Pyramid + weekly calls | 2018-08-31 | 2019-10-09 | +0% | -$172,944 | puts (recovery) +$11,348 |
+| Pyramid + weekly calls | 2020-09-02 | 2020-11-02 | -11% | -$167,832 | puts (recovery) +$3,136 |
+| Pyramid + weekly calls | 2014-09-18 | 2014-10-15 | -8% | -$130,829 | puts (recovery) -$4,284 |
+| Pyramid + weekly calls | 2015-07-20 | 2016-06-27 | -10% | -$125,632 | puts (recovery) -$5,895 |
+| Puts, recovery rule | 2015-07-17 | 2016-01-20 | -11% | -$24,193 | pyramid -$95,593 |
+| Puts, recovery rule | 2008-06-25 | 2009-01-20 | -41% | -$22,410 | pyramid $0 |
+| Puts, recovery rule | 2022-01-03 | 2022-06-17 | -32% | -$17,881 | pyramid $0 |
+| Puts, recovery rule | 2010-04-23 | 2010-07-01 | -16% | -$15,338 | pyramid -$114,085 |
+| Puts, recovery rule | 2025-02-19 | 2025-04-10 | -17% | -$15,125 | pyramid -$9,703 |
+
+* **Yes for margin.** Near its high the pyramid held $556,466 of NQ on average; 5% or more below it, only $88,194-$149,915. The recovery puts' margin moved the other way. Day by day the two margins were unrelated (correlation 0.04), not opposite.
+* **Yes in long bear markets:** in 2 of the puts' 5 worst drawdowns (2008, 2022) the pyramid sat flat and lost nothing.
+* **No in choppy corrections:** in Jul 2015-Jan 2016 (pyramid -$95,593), Apr 2010-Jul 2010 (pyramid -$114,085), Feb 2025-Apr 2025 (pyramid -$9,703) both lost at the same time. The pyramid had bought the rally and was stopped out on the way down, just as the puts went in the money. That is the joint risk to plan for.
+* In the pyramid's own worst drawdowns (whipsaws near highs) the puts did little either way (-$7,534 to +$11,348).
+* Monthly P&L correlation with the pyramid: 0.26 (recovery rule), 0.32 (fixed). Both make money in rising years.
+
+P&L by year, per $100k unit:
+
+| Year | NDX | Pyramid | Puts, recovery | Puts, fixed | Pyramid + 1 put unit (recovery) | Pyramid peak margin | Puts (recovery) peak margin |
+|---|---|---|---|---|---|---|---|
+| 2008 (from 20 Mar) | -31% | -$18,518 | -$7,660 | -$4,163 | -$26,178 | $22,829 | $26,795 |
+| 2009 | +54% | $290,072 | $32,682 | $18,184 | $322,754 | $118,165 | $30,853 |
+| 2010 | +19% | $49,668 | $7,153 | $540 | $56,821 | $94,356 | $30,433 |
+| 2011 | +1% | -$65,576 | $3,099 | $2,625 | -$62,477 | $28,670 | $24,522 |
+| 2012 | +17% | -$15,215 | $9,190 | $1,780 | -$6,025 | $41,281 | $24,522 |
+| 2013 | +35% | $155,996 | $15,933 | $11,929 | $171,929 | $116,804 | $21,847 |
+| 2014 | +18% | $119,552 | -$841 | -$2,544 | $118,711 | $122,731 | $21,735 |
+| 2015 | +8% | -$73,266 | $4,999 | $562 | -$68,267 | $67,320 | $34,839 |
+| 2016 | +6% | $77,170 | $11,522 | $4,367 | $88,692 | $107,124 | $66,656 |
+| 2017 | +32% | $58,164 | $9,971 | $9,971 | $68,135 | $80,035 | $10,000 |
+| 2018 | -1% | -$97,133 | $4,796 | -$1,540 | -$92,337 | $80,749 | $24,914 |
+| 2019 | +38% | $84,890 | $16,646 | $13,311 | $101,536 | $101,915 | $20,022 |
+| 2020 | +48% | $253,831 | $26,568 | $18,361 | $280,399 | $116,072 | $16,952 |
+| 2021 | +27% | $187,577 | $15,905 | $14,863 | $203,482 | $124,026 | $14,459 |
+| 2022 | -34% | $0 | -$882 | -$8,102 | -$882 | $0 | $33,550 |
+| 2023 | +54% | $149,896 | $13,873 | $7,453 | $163,769 | $111,597 | $20,632 |
+| 2024 | +25% | -$68,248 | $12,468 | $6,499 | -$55,780 | $82,163 | $19,169 |
+| 2025 | +20% | $173,584 | $7,752 | $557 | $181,336 | $127,485 | $33,043 |
+| 2026 YTD | +11% | $144,027 | -$121 | -$1,780 | $143,906 | $125,525 | $15,088 |
+
+**Takeaway:** add 1-2 recovery-rule put units per pyramid unit. Calmar rises from 0.43 to 0.47-0.50, profit rises by $9,831-$19,662 a year, and the shared account needs 19%-24% less capital than two separate ones. Going to about 4.75 units maximises Calmar (0.56), but needs $540,400 of peak capital per pyramid unit.
+
+Files: [`results/combo_pyramid_mix.csv`](../results/combo_pyramid_mix.csv) (all mixes, 10% and 6% put margin), `combo_pyramid_market_state.csv`, `combo_pyramid_overlap.csv`, `combo_pyramid_by_year.csv`, and [`results/combo_pyramid_daily.csv`](../results/combo_pyramid_daily.csv) (daily P&L and notional of both strategies). Inputs: `data/external/nqpyramidingup/` (see its SOURCE.md). Code: `nqput/combo.py`.
+
+## 11. Limitations
 
 * Premiums are reconstructed from VXN/VIX, not traded quotes. Error is probably ±10% of premium, and larger before 2001 (VXN proxy) and before 1990 (VXO-based). NQ options did not exist before ~1999-2000; earlier years are a hypothetical on the index.
 * Settlement uses the expiry-day close. Real quarterly NQ options settle to the Friday-morning SOQ, and early exercise of American-style quarterlies is ignored.
@@ -538,7 +645,7 @@ Baseline: the -5% hedge kept to expiry, base = 1x a $100k account, reinvesting a
 * Returns are excess of cash: collateral would also earn T-bill interest (~3% avg). Taxes are ignored.
 * Margin is approximate. SPAN margin can jump in a crash, and that is exactly when the martingale needs more of it.
 
-## 11. Reproduce
+## 12. Reproduce
 
 ```bash
 pip install -r requirements.txt

@@ -16,6 +16,7 @@ from pathlib import Path
 import pandas as pd
 
 from nqput import analysis as A
+from nqput import combo
 from nqput.backtest import MarketParams
 from nqput.data import download_all, load_market_data
 from nqput.volmodel import VolParams
@@ -23,6 +24,7 @@ from nqput.volmodel import VolParams
 ROOT = Path(__file__).resolve().parent
 RAW = ROOT / "data" / "raw"
 RES = ROOT / "results"
+PYRAMID = ROOT / "data" / "external" / "nqpyramidingup"   # inputs copied from the pyramid study
 
 
 def main() -> None:
@@ -33,11 +35,11 @@ def main() -> None:
     t0 = time.time()
     RES.mkdir(exist_ok=True)
 
-    print("1/8 data")
+    print("1/9 data")
     download_all(RAW, refresh=args.refresh)
     df = load_market_data(RAW)
 
-    print("2/8 vol model + cycles")
+    print("2/9 vol model + cycles")
     vp, mp = VolParams(), MarketParams()
     ctx = A.Context(df, vp, mp)
     (RES / "vol_model_fit.json").write_text(json.dumps(ctx.diag, indent=2, default=str))
@@ -46,12 +48,12 @@ def main() -> None:
     ivs = ivs[ivs.index >= "1986-01-01"]
     ivs[ivs.index.weekday == 4].round(4).to_csv(RES / "implied_vol_weekly_model.csv")
 
-    print("3/8 premium history")
+    print("3/9 premium history")
     pt = A.premium_table(ctx)
     pt.to_csv(RES / "premiums_quarterly.csv", index=False)
     A.premium_by_year(pt).to_csv(RES / "premiums_by_year.csv")
 
-    print("4/8 strategy grid")
+    print("4/9 strategy grid")
     grid, runs = A.strategy_grid(ctx)
     grid.round(4).to_csv(RES / "strategy_grid.csv", index=False)
     grid01, _ = A.strategy_grid(ctx, start="2001-03-01")
@@ -70,7 +72,7 @@ def main() -> None:
     eq = pd.DataFrame(key_eq)
     eq[eq.index.weekday == 4].round(0).to_csv(RES / "equity_weekly_key_strategies.csv")
 
-    print("5/8 recovery sizing by start year")
+    print("5/9 recovery sizing by start year")
     pairs = [(A.NAKED, A.NO_HEDGE, A.FIXED), (A.NAKED, A.NO_HEDGE, A.RECOVER),
              (A.STRUCTURES[2], A.NO_HEDGE, A.FIXED), (A.STRUCTURES[2], A.NO_HEDGE, A.RECOVER),
              (A.STRUCTURES[4], A.NO_HEDGE, A.RECOVER),
@@ -78,7 +80,7 @@ def main() -> None:
     sy = A.start_year_table(ctx, pairs, range(1987, 2025))
     sy.round(3).to_csv(RES / "start_year_robustness.csv", index=False)
 
-    print("6/8 sensitivity + ladder")
+    print("6/9 sensitivity + ladder")
     sens = A.sensitivity(df, vp, mp)
     sens.round(4).to_csv(RES / "sensitivity.csv", index=False)
     lad = A.ladder_table(df, vp, mp)
@@ -88,11 +90,11 @@ def main() -> None:
     pao = A.premium_after_outcome(pt)
     pao.round(3).to_csv(RES / "premium_after_outcome.csv")
 
-    print("7/8 live snapshot")
+    print("7/9 live snapshot")
     snap = A.live_snapshot(ctx)
     (RES / "live_snapshot.json").write_text(json.dumps(snap, indent=2, default=float))
 
-    print("8/8 start 2008, recover every loss in one quarter ($100k base, USD)")
+    print("8/9 start 2008, recover every loss in one quarter ($100k base, USD)")
     camp = A.recovery_campaigns(df, vp, mp)
     camp_fx = A.recovery_campaigns(df, vp, mp, sizing=A.FIXED)
     camp["fixed_summary"] = camp_fx["summary"]
@@ -136,6 +138,24 @@ def main() -> None:
     h5["improve"] = A.improvement_summary(imp)
     h5["improve"].round(4).to_csv(RES / "improvement_summary.csv", index=False)
     camp["h5"] = h5
+
+    if (PYRAMID / "equity_daily.csv").exists():
+        print("9/9 combined with the NQ pyramid strategy")
+        eq, trades = combo.load_pyramid(PYRAMID)
+        v = cv["variants"]["naked_h5_latch"]
+        cb = combo.run(eq, trades, {"rec": v["recover"]["run"], "fix": v["fixed"]["run"]}, df.ndx)
+        pd.concat([cb["mix"].assign(put_margin=combo.PUT_MARGIN), cb["mix_margin6"].assign(put_margin=0.06)]).round(4).to_csv(
+            RES / "combo_pyramid_mix.csv", index=False)
+        cb["standalone"].round(4).to_csv(RES / "combo_pyramid_standalone.csv", index=False)
+        cb["states"].round(4).to_csv(RES / "combo_pyramid_market_state.csv")
+        cb["overlap"].round(4).to_csv(RES / "combo_pyramid_overlap.csv", index=False)
+        cb["by_year"].round(4).to_csv(RES / "combo_pyramid_by_year.csv")
+        # daily P&L and notional of both strategies per $100k unit (the put legs are this study's output)
+        fr = cb["frame"].round(2)
+        fr["ndx_off_high"] = cb["frame"].ndx_off_high.round(4)
+        fr.to_csv(RES / "combo_pyramid_daily.csv")
+        cb["reference"] = combo.pyramid_reference(PYRAMID)
+        camp["combo"] = cb
 
     if not args.no_report:
         from nqput import report

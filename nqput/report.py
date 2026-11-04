@@ -7,6 +7,7 @@ import matplotlib
 
 matplotlib.use("Agg")
 import matplotlib.dates as mdates  # noqa: E402
+import matplotlib.patches  # noqa: E402
 import matplotlib.ticker  # noqa: E402
 import matplotlib.pyplot as plt  # noqa: E402
 import numpy as np  # noqa: E402
@@ -287,6 +288,63 @@ def fig_campaign_variants(path: Path, cv: dict):
     plt.close(fig)
 
 
+def fig_combo(path: Path, cb: dict, k: float = 2.0):
+    """Margin, drawdowns and capital in use: pyramid strategy vs the -5% hedged puts (recovery rule)."""
+    from . import combo as C
+    F = cb["frame"]
+
+    def dd(s):
+        return s - s.cummax().clip(lower=0.0)
+    wk = lambda s, how: getattr(s.resample("W-FRI"), how)() / 1e3        # weekly, keeps the extremes
+    down = wk((F.ndx_off_high > 0.10).astype(float), "max") > 0
+    m_pyr = wk(F.notional_pyr * C.PYR_MARGIN, "max")
+    m_put = wk(F.notional_rec * C.PUT_MARGIN, "max")
+    d_pyr, d_put = wk(dd(F.pyr7), "min"), wk(dd(k * F.puts_rec), "min")
+    cap_daily = F.notional_pyr * C.PYR_MARGIN + k * F.notional_rec * C.PUT_MARGIN - dd(F.pyr7 + k * F.puts_rec)
+    cap = wk(cap_daily, "max")
+    sep = ((F.notional_pyr * C.PYR_MARGIN - dd(F.pyr7)).max() +
+           (k * F.notional_rec * C.PUT_MARGIN - dd(k * F.puts_rec)).max()) / 1e3
+    box = dict(boxstyle="round,pad=0.2", fc=SURFACE, ec="none", alpha=0.9)
+    fig, (a1, a2, a3) = plt.subplots(3, 1, figsize=(11, 10.5), sharex=True, gridspec_kw={"height_ratios": [1, 1, 1]})
+    for ax in (a1, a2, a3):
+        ax.fill_between(down.index, 0, 1, where=down.values, transform=ax.get_xaxis_transform(), color=GRID,
+                        alpha=0.7, lw=0, step="mid")
+    a1.plot(m_pyr.index, m_pyr.values, color=S[0], lw=1.2, label="Pyramid + weekly calls (1 unit)")
+    a1.plot(m_put.index, m_put.values, color=S[1], lw=1.6, label="Puts, -5% hedge, recovery rule (1 unit)")
+    for s_, txt in ((m_pyr, "pyramid"), (m_put, "puts")):
+        t = s_.idxmax()
+        a1.annotate(f"{txt} peak ${s_.max():,.0f}k ({t:%b %Y})", (t, s_.max()), xytext=(-6, 4), ha="right",
+                    textcoords="offset points", color=INK2, fontsize=8.5, bbox=box)
+    a2.plot(d_pyr.index, d_pyr.values, color=S[0], lw=1.2, label="Pyramid + weekly calls (1 unit)")
+    a2.plot(d_put.index, d_put.values, color=S[1], lw=1.6, label=f"Puts, -5% hedge, recovery rule ({k:g} units)")
+    a3.plot(cap.index, cap.values, color=S[2], lw=1.2, label=f"One account: pyramid + {k:g} put units")
+    a3.axhline(cap.max(), color=INK2, lw=1.0, ls="--")
+    a3.axhline(sep, color=MUTED, lw=1.0, ls=":")
+    x0 = cap.index[0]
+    a3.annotate(f"one account needs ${cap.max():,.0f}k", (x0, cap.max()), xytext=(4, 4), textcoords="offset points",
+                color=INK2, fontsize=8.5, bbox=box)
+    a3.annotate(f"two separate accounts need ${sep:,.0f}k", (x0, sep), xytext=(4, 4), textcoords="offset points",
+                color=INK2, fontsize=8.5, bbox=box)
+    kfmt = matplotlib.ticker.FuncFormatter(lambda v, _: f"-${abs(v):,.0f}k" if v < 0 else f"${v:,.0f}k")
+    for ax in (a1, a2, a3):
+        ax.yaxis.set_major_formatter(kfmt)
+        ax.axhline(0, color=AXIS, lw=0.8)
+    a1.set_title("Margin in use, per $100k unit (USD)")
+    a2.set_title("Drawdown from each strategy's own high (USD)")
+    a3.set_title(f"Capital in use (margin + drawdown) in one account: 1 pyramid unit + {k:g} put units (USD)")
+    shade = matplotlib.patches.Patch(color=GRID, alpha=0.7, label="NDX more than 10% below its 52-week high")
+    h, lab = a1.get_legend_handles_labels()
+    a1.legend(h + [shade], lab + [shade.get_label()], loc="upper left")
+    a2.legend(loc="lower left")
+    a1.set_ylim(0, max(m_pyr.max(), m_put.max()) * 1.35)
+    a3.set_ylim(0, sep * 1.15)
+    a3.xaxis.set_major_locator(mdates.YearLocator(2))
+    a3.xaxis.set_major_formatter(mdates.DateFormatter("%Y"))
+    fig.tight_layout()
+    fig.savefig(path, dpi=150)
+    plt.close(fig)
+
+
 # ----------------------------------------------------------------------------- markdown helpers
 def _md_table(df: pd.DataFrame, fmt: dict | None = None) -> str:
     fmt = fmt or {}
@@ -340,6 +398,8 @@ def build(root: Path, df, ctx, runs, grid, grid01, pt, sy, sens, lad, cal, cal_r
     fig_hedging(figs / "5_delta_hedging.png", runs, mp)
     fig_campaigns(figs / "6_recovery_2008.png", camp)
     fig_campaign_variants(figs / "7_recovery_2008_variants.png", camp["variants"])
+    if "combo" in camp:
+        fig_combo(figs / "8_combined_with_pyramid.png", camp["combo"])
     (root / "reports" / "REPORT.md").write_text(_markdown(df, ctx, runs, grid, grid01, pt, sy, sens, lad, cal,
                                                           pao, snap, camp))
 
@@ -656,6 +716,152 @@ def _reinvest_section(rs: pd.DataFrame) -> list[str]:
     return L
 
 
+
+def _combo_section(cb: dict, calmar_tests: pd.DataFrame | None = None) -> list[str]:
+    from . import combo as C
+    L: list[str] = []
+    w = L.append
+    t0, t1, yrs = cb["period"]
+    sa = cb["standalone"].set_index("strategy")
+    mix = cb["mix"]
+    pyr = sa.loc[C.PYR_LABEL["pyr7"]]
+    k_ = lambda p, q, k: mix[(mix.pyramid == C.PYR_LABEL[p]) & (mix.puts == C.PUT_LABEL[q]) & (mix.put_units == k)].iloc[0]
+    best = lambda p, q: mix[(mix.pyramid == C.PYR_LABEL[p]) & (mix.puts == C.PUT_LABEL[q]) & (mix.note == "best Calmar")].iloc[0]
+    m6 = cb["mix_margin6"]
+    m6r = lambda k: m6[(m6.pyramid == C.PYR_LABEL["pyr7"]) & (m6.puts == C.PUT_LABEL["rec"]) & (m6.put_units == k)].iloc[0]
+    pct = lambda v: f"{100 * v:.0f}%"
+    w("## 10. Combined with the NQ pyramid strategy (one account)\n")
+    w("The pyramid study (repo NQPyramidingUP, its chosen version: buy when NQ has recovered 70% of a 5% pullback, add "
+      "a unit every +1% with a 1% stop on each, sell everything at +20%, and sell 20-delta 7-day calls against every "
+      "contract) is long only while NQ rallies. After a fall it is stopped out and sits flat, so it needs little capital "
+      "exactly when the puts here need the most. In one account, one strategy's spare capital can carry the other's need.\n")
+    w(f"Both are measured the same way: US dollars per $100k unit, never reinvested, daily closes, {t0:%d %b %Y} to "
+      f"{t1:%d %b %Y} ({yrs:.1f} years). The puts are the ATM put with the delta hedge from -5% kept to expiry (section "
+      "9.2), with the recovery rule or at fixed size. **Calmar** = average profit per year / worst drawdown. **Capital in "
+      f"use** = margin (pyramid: {100 * C.PYR_MARGIN:.1f}% of the NQ held, about $3k per MNQ; puts: {100 * C.PUT_MARGIN:.0f}% "
+      "of the put notional) + the drawdown from the high. In one account the margins add up, but the drawdown is that of "
+      "the combined P&L.\n")
+    t = sa.reset_index()[["strategy", "profit_per_year", "worst_drawdown", "drawdown_trough", "calmar", "peak_capital",
+                          "return_on_peak_capital"]]
+    t.columns = ["Alone, per $100k unit", "Profit per year", "Worst drawdown", "Low point", "Calmar",
+                 "Peak capital in use", "Profit / peak capital"]
+    t["Worst drawdown"] = -t["Worst drawdown"]
+    fm = {"Profit per year": _usd, "Worst drawdown": _usd, "Calmar": lambda v: f"{v:.2f}", "Peak capital in use": _usd,
+          "Profit / peak capital": pct}
+    w(_md_table(t, fm) + "\n")
+    ref = cb.get("reference") or {}
+    if ref:
+        w(f"The pyramid's figures come from its daily equity curve from {t0:%d %b %Y}, so its worst drawdown here "
+          f"({_usd(-pyr.worst_drawdown)}) is a little smaller than in its own intraday report ({_usd(ref['max_drawdown'])}), "
+          f"and Calmar is {pyr.calmar:.2f} instead of {ref['calmar']:.2f}.\n")
+    if calmar_tests is not None:
+        ct = calmar_tests[(calmar_tests.variant == "Hedge from -5% to expiry") & (calmar_tests.start_year == 2008)
+                          & (calmar_tests.calendar == "Mar/Jun/Sep/Dec")].set_index("sizing")
+        w(f"The puts' Calmar differs slightly from section 9.2 ({ct.loc['Recovery rule', 'calmar']:.2f} / "
+          f"{ct.loc['Fixed size', 'calmar']:.2f}): same worst drawdown, but this window ends on {t1:%d %b %Y}, the pyramid "
+          "data's last day.\n")
+    w("**One pyramid unit plus k put units** (each $100k):\n")
+    keep = mix.put_units.isin([1, 2, 3]) | (mix.note == "best Calmar") | (
+        (mix.note == "equal worst drawdown") & (mix.puts == C.PUT_LABEL["rec"]))
+    x = mix[keep].copy()
+    x["Mix"] = x.pyramid + " + " + x.puts.str.lower()
+    x["k"] = x.put_units.map(lambda v: f"{v:g}") + np.where(x.note != "", " (" + x.note + ")", "")
+    x["worst_drawdown"] = -x.worst_drawdown
+    x = x[["Mix", "k", "profit_per_year", "worst_drawdown", "drawdown_trough", "calmar", "peak_capital",
+           "peak_capital_if_separate", "return_on_peak_capital"]]
+    x.columns = ["Mix", "Put units", "Profit per year", "Worst drawdown", "Low point", "Calmar",
+                 "Peak capital, one account", "Peak capital, two accounts", "Profit / peak capital"]
+    w(_md_table(x, {"Profit per year": _usd, "Worst drawdown": _usd, "Calmar": lambda v: f"{v:.2f}",
+                    "Peak capital, one account": _usd, "Peak capital, two accounts": _usd,
+                    "Profit / peak capital": pct}) + "\n")
+    r1, r2, r3, rb = k_("pyr7", "rec", 1), k_("pyr7", "rec", 2), k_("pyr7", "rec", 3), best("pyr7", "rec")
+    f1, fb = k_("pyr7", "fix", 1), best("pyr7", "fix")
+    n1, n2, nb = k_("pyr0", "rec", 1), k_("pyr0", "rec", 2), best("pyr0", "rec")
+    w(f"* **Calmar rises with the recovery-rule puts:** {pyr.calmar:.2f} alone, {r1.calmar:.2f} with 1 put unit, "
+      f"{r2.calmar:.2f} with 2 and {r3.calmar:.2f} with 3, peaking at {rb.calmar:.2f} with about {rb.put_units:g} units. "
+      "Beyond that the puts dominate and Calmar slides back toward their own "
+      f"{sa.loc[C.PUT_LABEL['rec'] + ' (-5% hedge)'].calmar:.2f}.")
+    w(f"* **Fixed-size puts barely move it** ({f1.calmar:.2f} with 1 unit, at most {fb.calmar:.2f}). They earn little "
+      "per unit, and their losses fell in the same 2025 sell-off that produced the pyramid's worst drawdown.")
+    w(f"* **Without the weekly calls the gain is bigger:** {sa.loc[C.PYR_LABEL['pyr0']].calmar:.2f} alone, "
+      f"{n1.calmar:.2f} with 1 unit, {n2.calmar:.2f} with 2, {nb.calmar:.2f} at best. That version's worst drawdown "
+      "(2018-19) had nothing to do with put losses.")
+    w(f"* **One account needs less than two separate ones:** at 1 + 2 units, {_usd(r2.peak_capital)} at the peak instead "
+      f"of {_usd(r2.peak_capital_if_separate)} ({pct(r2.capital_saved_by_one_account)} less), because the two peaks came "
+      "at different times.")
+    w(f"* **But profit per dollar of capital does not improve.** Profit / peak capital is {pct(pyr.return_on_peak_capital)} "
+      f"for the pyramid alone, {pct(r1.return_on_peak_capital)} at 1 + 1, {pct(r2.return_on_peak_capital)} at 1 + 2 and "
+      f"{pct(rb.return_on_peak_capital)} at the best-Calmar mix. The recovery rule's margin is the cost: up to "
+      f"{_usd(cb['by_year'].puts_rec_peak_margin.max())} per unit in {cb['by_year'].puts_rec_peak_margin.idxmax()}, when it "
+      f"held {cb['frame'].notional_rec.max() / 1e5:.1f}x size. With a 6% put margin "
+      f"instead of 10% it is about break-even ({pct(m6r(1).return_on_peak_capital)} at 1 + 1, "
+      f"{pct(m6r(2).return_on_peak_capital)} at 1 + 2).\n")
+    st = cb["states"].reset_index()
+    st = st[["market", "share_of_days", "pyramid_notional", "pyramid_margin", "puts_rec_margin",
+             "pyramid_capital_in_use", "puts_rec_capital_in_use"]]
+    st.columns = ["Market", "Share of days", "Pyramid: NQ held", "Pyramid: margin", "Puts (recovery): margin",
+                  "Pyramid: capital in use", "Puts (recovery): capital in use"]
+    w("**Does the pyramid free up capital when the market is down?** Daily averages per $100k unit, by how far NDX was "
+      "below its 52-week high:\n")
+    w(_md_table(st, {"Share of days": pct, "Pyramid: NQ held": _usd, "Pyramid: margin": _usd,
+                     "Puts (recovery): margin": _usd, "Pyramid: capital in use": _usd,
+                     "Puts (recovery): capital in use": _usd}) + "\n")
+    ov = cb["overlap"]
+    po = ov[ov.strategy == C.PUT_LABEL["rec"]]
+    pp = ov[ov.strategy == C.PYR_LABEL["pyr7"]]
+    w("![Combined with the pyramid](figures/8_combined_with_pyramid.png)\n")
+    w("Worst drawdowns of each strategy, and what the other one did over the same dates:\n")
+    o = ov.copy()
+    sg = lambda v: "" if pd.isna(v) else ("$0" if round(v) == 0 else _money(v, True))
+    o["Other strategy, same dates"] = np.where(o.strategy == C.PYR_LABEL["pyr7"],
+                                               o.puts_rec_same_dates.map(lambda v: f"puts (recovery) {sg(v)}"),
+                                               o.pyr7_same_dates.map(lambda v: f"pyramid {sg(v)}"))
+    o = o[o.strategy != C.PUT_LABEL["fix"]][["strategy", "from", "to", "ndx_move", "drawdown", "Other strategy, same dates"]]
+    o.columns = ["Strategy", "From", "To", "NDX", "Drawdown", "Other strategy, same dates"]
+    w(_md_table(o, {"NDX": lambda v: f"{100 * v:+.0f}%", "Drawdown": _usd}) + "\n")
+    flat = po[po.pyr7_same_dates == 0]
+    both = po[po.pyr7_same_dates < 0]
+    w(f"* **Yes for margin.** Near its high the pyramid held {_usd(cb['states'].pyramid_notional.iloc[0])} of NQ on average; "
+      f"5% or more below it, only {_usd(cb['states'].pyramid_notional.iloc[1:].min())}-"
+      f"{_usd(cb['states'].pyramid_notional.iloc[1:].max())}. The recovery puts' margin moved the other way. Day by day "
+      f"the two margins were unrelated (correlation {cb['margin_corr']:.2f}), not opposite.")
+    w(f"* **Yes in long bear markets:** in {len(flat)} of the puts' {len(po)} worst drawdowns ("
+      + ", ".join(f"{r['from']:%Y}" for _, r in flat.iterrows())
+      + ") the pyramid sat flat and lost nothing.")
+    w("* **No in choppy corrections:** in "
+      + ", ".join(f"{r['from']:%b %Y}-{r['to']:%b %Y} (pyramid {_usd(r.pyr7_same_dates)})" for _, r in both.iterrows())
+      + " both lost at the same time. The pyramid had bought the rally and was stopped out on the way down, just as the puts "
+        "went in the money. That is the joint risk to plan for.")
+    w(f"* In the pyramid's own worst drawdowns (whipsaws near highs) the puts did little either way "
+      f"({_money(pp.puts_rec_same_dates.min(), True)} to {_money(pp.puts_rec_same_dates.max(), True)}).")
+    mc = cb["monthly_corr"]
+    w(f"* Monthly P&L correlation with the pyramid: {mc.loc['pyr7', 'puts_rec']:.2f} (recovery rule), "
+      f"{mc.loc['pyr7', 'puts_fix']:.2f} (fixed). Both make money in rising years.\n")
+    by = cb["by_year"].reset_index()
+    by = by[["year", "ndx_move", "pyramid_pnl", "puts_rec_pnl", "puts_fix_pnl", "one_to_one_rec_pnl",
+             "pyramid_peak_margin", "puts_rec_peak_margin"]]
+    by.columns = ["Year", "NDX", "Pyramid", "Puts, recovery", "Puts, fixed", "Pyramid + 1 put unit (recovery)",
+                  "Pyramid peak margin", "Puts (recovery) peak margin"]
+    by["Year"] = by.Year.astype(str)
+    by.loc[by.index[0], "Year"] += f" (from {t0:%d %b})"
+    by.loc[by.index[-1], "Year"] += " YTD"
+    w("P&L by year, per $100k unit:\n")
+    w(_md_table(by, {"NDX": lambda v: f"{100 * v:+.0f}%", "Pyramid": _usd, "Puts, recovery": _usd, "Puts, fixed": _usd,
+                     "Pyramid + 1 put unit (recovery)": _usd, "Pyramid peak margin": _usd,
+                     "Puts (recovery) peak margin": _usd}) + "\n")
+    w(f"**Takeaway:** add 1-2 recovery-rule put units per pyramid unit. Calmar rises from {pyr.calmar:.2f} to "
+      f"{r1.calmar:.2f}-{r2.calmar:.2f}, profit rises by {_usd(r1.profit_per_year - pyr.profit_per_year)}-"
+      f"{_usd(r2.profit_per_year - pyr.profit_per_year)} a year, and the shared account needs "
+      f"{pct(r1.capital_saved_by_one_account)}-{pct(r2.capital_saved_by_one_account)} less capital than two separate "
+      f"ones. Going to about {rb.put_units:g} units maximises Calmar ({rb.calmar:.2f}), but needs "
+      f"{_usd(rb.peak_capital)} of peak capital per pyramid unit.\n")
+    w("Files: [`results/combo_pyramid_mix.csv`](../results/combo_pyramid_mix.csv) (all mixes, 10% and 6% put margin), "
+      "`combo_pyramid_market_state.csv`, `combo_pyramid_overlap.csv`, `combo_pyramid_by_year.csv`, and "
+      "[`results/combo_pyramid_daily.csv`](../results/combo_pyramid_daily.csv) (daily P&L and notional of both "
+      "strategies). Inputs: `data/external/nqpyramidingup/` (see its SOURCE.md). Code: `nqput/combo.py`.\n")
+    return L
+
+
 def _markdown(df, ctx, runs, grid, grid01, pt, sy, sens, lad, cal, pao, snap, camp) -> str:
     mp = ctx.mp
     settled = pt[pt.status == "settled"]
@@ -760,6 +966,21 @@ def _markdown(df, ctx, runs, grid, grid01, pt, sy, sens, lad, cal, pao, snap, ca
       f"(fixed size: {_usd(cfx['total_pnl'])}). The worst cumulated loss was {_usd(csm['worst_cum_loss'])} at an expiry and "
       f"{_usd(csm['worst_cum_loss_mtm'])} inside a quarter, holding up to {csm['max_size_x']:.1f}x size "
       f"({_usd(csm['max_notional'])} of notional).\n")
+    if "combo" in camp:
+        from . import combo as C
+        cb = camp["combo"]
+        mx = cb["mix"]
+        sel = mx[(mx.pyramid == C.PYR_LABEL["pyr7"]) & (mx.puts == C.PUT_LABEL["rec"])].set_index("put_units")
+        L[-1] = L[-1].rstrip("\n")
+        w(f"9. **Combined with the NQ pyramid strategy in one account (section 10).** Per $100k pyramid unit plus 1-2 "
+          f"put units (-5% hedge, recovery rule): Calmar {sel.loc[0].calmar:.2f} alone, {sel.loc[1].calmar:.2f}-"
+          f"{sel.loc[2].calmar:.2f} combined, with {_usd(sel.loc[1].profit_per_year)}-{_usd(sel.loc[2].profit_per_year)} "
+          f"a year instead of {_usd(sel.loc[0].profit_per_year)}. The pyramid holds little NQ when the market is down, so "
+          f"one account needs {100 * sel.loc[1].capital_saved_by_one_account:.0f}-"
+          f"{100 * sel.loc[2].capital_saved_by_one_account:.0f}% less capital than two. Profit per dollar of peak "
+          f"capital does not improve ({100 * sel.loc[0].return_on_peak_capital:.0f}% alone, "
+          f"{100 * sel.loc[1].return_on_peak_capital:.0f}% and {100 * sel.loc[2].return_on_peak_capital:.0f}% combined), "
+          "and in choppy corrections (2010, 2015-16, 2025) both lose together.\n")
     w("## 1. What was tested\n")
     w("* **Trade.** At the close of each quarterly NQ expiry (3rd Friday of Mar/Jun/Sep/Dec), sell the put that expires "
       "at the next quarterly expiry (~13 weeks) with the **strike at the futures price (ATM-forward)**. Hold it to expiry. "
@@ -928,7 +1149,9 @@ def _markdown(df, ctx, runs, grid, grid01, pt, sy, sens, lad, cal, pao, snap, ca
     L.extend(_campaign_section(camp))
     L.extend(_variant_section(camp["variants"]))
     L.extend(_h5_section(camp["h5"]))
-    w("## 10. Limitations\n")
+    if "combo" in camp:
+        L.extend(_combo_section(camp["combo"], camp["h5"].get("calmar")))
+    w("## 11. Limitations\n")
     w("* Premiums are reconstructed from VXN/VIX, not traded quotes. Error is probably ±10% of premium, and larger before 2001 "
       "(VXN proxy) and before 1990 (VXO-based). NQ options did not exist before ~1999-2000; earlier years are a "
       "hypothetical on the index.")
@@ -938,7 +1161,7 @@ def _markdown(df, ctx, runs, grid, grid01, pt, sy, sens, lad, cal, pao, snap, ca
       "spread marks and hedge ratios (but not for expiry payoffs).")
     w("* Returns are excess of cash: collateral would also earn T-bill interest (~3% avg). Taxes are ignored.")
     w("* Margin is approximate. SPAN margin can jump in a crash, and that is exactly when the martingale needs more of it.\n")
-    w("## 11. Reproduce\n")
+    w("## 12. Reproduce\n")
     w("```bash\npip install -r requirements.txt\npython run_backtest.py --refresh   # downloads data, ~30 s\n```\n")
     w("Outputs: `results/*.csv` (grid of 200+ strategy variants, premium history, sensitivities), "
       "`reports/figures/*.png`, and this report.\n")

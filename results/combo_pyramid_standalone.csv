@@ -1,0 +1,5 @@
+strategy,profit_per_year,worst_drawdown,drawdown_trough,calmar,peak_capital,peak_capital_date,return_on_peak_capital
+Pyramid + weekly calls,75534.9997,173862.0,2025-05-23,0.4345,208270.0904,2025-06-16,0.3627
+"Pyramid, no calls",59314.3766,211200.0,2019-10-09,0.2808,236706.5327,2019-10-22,0.2506
+"Puts, recovery rule (-5% hedge)",9831.0627,24193.2236,2016-01-20,0.4064,89330.6196,2016-03-18,0.1101
+"Puts, fixed size (-5% hedge)",4987.9482,13024.7896,2009-01-20,0.383,23024.7896,2009-01-20,0.2166
