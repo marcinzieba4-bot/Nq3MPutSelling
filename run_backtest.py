@@ -154,6 +154,10 @@ def main() -> None:
         fr = cb["frame"].round(2)
         fr["ndx_off_high"] = cb["frame"].ndx_off_high.round(4)
         fr.to_csv(RES / "combo_pyramid_daily.csv")
+        pd.concat([e.assign(series=combo.MIXES[k][0]) for k, e in cb["episodes"].items()]).round(
+            {"old_high": 2, "depth": 2}).to_csv(
+            RES / "combo_pyramid_drawdowns.csv", index=False)
+        cb["underwater"].round(4).to_csv(RES / "combo_pyramid_underwater.csv", index=False)
         cb["reference"] = combo.pyramid_reference(PYRAMID)
         camp["combo"] = cb
 

@@ -345,6 +345,67 @@ def fig_combo(path: Path, cb: dict, k: float = 2.0):
     plt.close(fig)
 
 
+def fig_combo_pnl(path: Path, cb: dict, k_main: int = 2):
+    """Combined P&L, the stretches below the old high, and P&L by calendar year."""
+    from . import combo as C
+    F = cb["frame"]
+    main_key = f"1+{k_main}"
+    lines = [("pyramid", S[0], 1.3), ("1+1", S[3], 1.3), (main_key, S[2], 1.8)]
+    fig, (a1, a2, a3) = plt.subplots(3, 1, figsize=(11, 11), sharex=True, gridspec_kw={"height_ratios": [1.5, 1, 1]})
+    ep = cb["episodes"][main_key]
+    long_ = ep[ep.days_below_high >= 182].reset_index(drop=True)
+    for i, r in long_.iterrows():
+        end = r.back_at_high if not r.ongoing else F.index[-1]
+        for ax in (a1, a2):
+            ax.axvspan(r.old_high_date, end, color=GRID, alpha=0.55, lw=0)
+        mid = r.old_high_date + (end - r.old_high_date) / 2
+        d = r.days_below_high
+        lab = f"{d / 365.25:.1f}y" if d >= 365 else f"{d / 30.44:.0f}m"
+        a1.text(mid, 0.97 if i % 2 == 0 else 0.90, lab, transform=a1.get_xaxis_transform(), ha="center", va="top",
+                fontsize=8, color=INK2)
+    for key, col, lw in lines:
+        s = C.mix_pnl(F, key).resample("W-FRI").last() / 1e6
+        a1.plot(s.index, s.values, color=col, lw=lw, label=C.MIXES[key][0])
+        _end_label(a1, s, f"${s.iloc[-1]:.2f}M", col)
+    mfmt = matplotlib.ticker.FuncFormatter(lambda v, _: f"${v:.1f}M" if v else "$0")
+    a1.yaxis.set_major_formatter(mfmt)
+    h, lab = a1.get_legend_handles_labels()
+    band = matplotlib.patches.Patch(color=GRID, alpha=0.55, label=f"{C.MIXES[main_key][0]}: 6+ months below its old high")
+    a1.legend(h + [band], lab + [band.get_label()], loc="upper left", bbox_to_anchor=(0, 0.86))
+    a1.set_title("Cumulative P&L per $100k pyramid unit (USD), never reinvested")
+
+    def uw(key):
+        x = C.mix_pnl(F, key)
+        return (x - x.cummax().clip(lower=0.0)).resample("W-FRI").min() / 1e3
+    u2, u0 = uw(main_key), uw("pyramid")
+    a2.fill_between(u2.index, u2.values, 0, color=S[2], alpha=0.22, lw=0)
+    a2.plot(u2.index, u2.values, color=S[2], lw=1.2, label=C.MIXES[main_key][0])
+    a2.plot(u0.index, u0.values, color=S[0], lw=0.9, label=C.MIXES["pyramid"][0])
+    kfmt = matplotlib.ticker.FuncFormatter(lambda v, _: f"-${abs(v):,.0f}k" if v < 0 else f"${v:,.0f}k")
+    a2.yaxis.set_major_formatter(kfmt)
+    a2.axhline(0, color=AXIS, lw=0.8)
+    a2.legend(loc="lower left")
+    a2.set_title("Below the old P&L high (USD)")
+
+    by = cb["by_year"]
+    x = pd.to_datetime([f"{y}-07-01" for y in by.index])
+    off = pd.Timedelta(days=80)
+    a3.bar(x - off, by.pyramid_pnl / 1e3, width=150, color=S[0], label=C.MIXES["pyramid"][0])
+    a3.bar(x + off, by[f"one_to_{'one' if k_main == 1 else 'two'}_rec_pnl"] / 1e3, width=150, color=S[2],
+           label=C.MIXES[main_key][0])
+    a3.yaxis.set_major_formatter(kfmt)
+    a3.axhline(0, color=AXIS, lw=0.8)
+    a3.legend(loc="upper right")
+    a3.set_ylim(None, max(by.pyramid_pnl.max(), by.one_to_two_rec_pnl.max()) / 1e3 * 1.2)
+    a3.set_title("P&L by calendar year (USD; 2008 from 20 Mar, 2026 to 2 Nov)")
+    a3.xaxis.set_major_locator(mdates.YearLocator(2))
+    a3.xaxis.set_major_formatter(mdates.DateFormatter("%Y"))
+    a1.set_xlim(F.index[0] - pd.Timedelta(days=120), F.index[-1] + pd.Timedelta(days=430))
+    fig.tight_layout()
+    fig.savefig(path, dpi=150)
+    plt.close(fig)
+
+
 # ----------------------------------------------------------------------------- markdown helpers
 def _md_table(df: pd.DataFrame, fmt: dict | None = None) -> str:
     fmt = fmt or {}
@@ -400,6 +461,7 @@ def build(root: Path, df, ctx, runs, grid, grid01, pt, sy, sens, lad, cal, cal_r
     fig_campaign_variants(figs / "7_recovery_2008_variants.png", camp["variants"])
     if "combo" in camp:
         fig_combo(figs / "8_combined_with_pyramid.png", camp["combo"])
+        fig_combo_pnl(figs / "9_combined_pnl_drawdowns.png", camp["combo"])
     (root / "reports" / "REPORT.md").write_text(_markdown(df, ctx, runs, grid, grid01, pt, sy, sens, lad, cal,
                                                           pao, snap, camp))
 
@@ -839,15 +901,16 @@ def _combo_section(cb: dict, calmar_tests: pd.DataFrame | None = None) -> list[s
       f"{mc.loc['pyr7', 'puts_fix']:.2f} (fixed). Both make money in rising years.\n")
     by = cb["by_year"].reset_index()
     by = by[["year", "ndx_move", "pyramid_pnl", "puts_rec_pnl", "puts_fix_pnl", "one_to_one_rec_pnl",
-             "pyramid_peak_margin", "puts_rec_peak_margin"]]
+             "one_to_two_rec_pnl", "pyramid_peak_margin", "puts_rec_peak_margin"]]
     by.columns = ["Year", "NDX", "Pyramid", "Puts, recovery", "Puts, fixed", "Pyramid + 1 put unit (recovery)",
-                  "Pyramid peak margin", "Puts (recovery) peak margin"]
+                  "Pyramid + 2 put units (recovery)", "Pyramid peak margin", "Puts (recovery) peak margin"]
     by["Year"] = by.Year.astype(str)
     by.loc[by.index[0], "Year"] += f" (from {t0:%d %b})"
     by.loc[by.index[-1], "Year"] += " YTD"
     w("P&L by year, per $100k unit:\n")
     w(_md_table(by, {"NDX": lambda v: f"{100 * v:+.0f}%", "Pyramid": _usd, "Puts, recovery": _usd, "Puts, fixed": _usd,
-                     "Pyramid + 1 put unit (recovery)": _usd, "Pyramid peak margin": _usd,
+                     "Pyramid + 1 put unit (recovery)": _usd, "Pyramid + 2 put units (recovery)": _usd,
+                     "Pyramid peak margin": _usd,
                      "Puts (recovery) peak margin": _usd}) + "\n")
     w(f"**Takeaway:** add 1-2 recovery-rule put units per pyramid unit. Calmar rises from {pyr.calmar:.2f} to "
       f"{r1.calmar:.2f}-{r2.calmar:.2f}, profit rises by {_usd(r1.profit_per_year - pyr.profit_per_year)}-"
@@ -859,6 +922,103 @@ def _combo_section(cb: dict, calmar_tests: pd.DataFrame | None = None) -> list[s
       "`combo_pyramid_market_state.csv`, `combo_pyramid_overlap.csv`, `combo_pyramid_by_year.csv`, and "
       "[`results/combo_pyramid_daily.csv`](../results/combo_pyramid_daily.csv) (daily P&L and notional of both "
       "strategies). Inputs: `data/external/nqpyramidingup/` (see its SOURCE.md). Code: `nqput/combo.py`.\n")
+    if "underwater" in cb:
+        L.extend(_underwater_section(cb))
+    return L
+
+
+def _dur(days: float) -> str:
+    """Calendar days as months, or years from 12 months up."""
+    if days >= 365:
+        return f"{days / 365.25:.1f} years"
+    m = days / 30.44
+    return f"{m:.0f} months" if m >= 1.5 else f"{days:.0f} days"
+
+
+def _underwater_section(cb: dict) -> list[str]:
+    L: list[str] = []
+    w = L.append
+    t0, t1, _ = cb["period"]
+    u = cb["underwater"].set_index("key")
+    cols = ["pyramid", "1+1", "1+2", "puts"]
+    w("### 10.1 Combined P&L, and how long it stays below an old high\n")
+    w(f"One pyramid unit plus 1 or 2 put units (-5% hedge, recovery rule), in dollars, never reinvested, "
+      f"{t0:%d %b %Y} to {t1:%d %b %Y}. \"Below the old high\" means the total P&L is under the highest total "
+      "reached so far. The stretch ends on the day the P&L is back at that high.\n")
+    w("![Combined P&L and time below the old high](figures/9_combined_pnl_drawdowns.png)\n")
+
+    def span(r, which):
+        to = r[f"{which}_to"]
+        end = f"{to:%b %Y}" if to is not None and not pd.isna(to) else "not yet"
+        return f"{_dur(r[f'{which}_days'])} ({r[f'{which}_from']:%b %Y} to {end}, low {_usd(-r[f'{which}_depth'])})"
+
+    rows = [
+        ("Total P&L", lambda r: _usd(r.total_pnl)),
+        ("Profit per year", lambda r: _usd(r.profit_per_year)),
+        ("Worst drawdown", lambda r: f"{_usd(-r.worst_drawdown)} ({r.worst_drawdown_date:%b %Y})"),
+        ("Calmar", lambda r: f"{r.calmar:.2f}"),
+        ("Longest time below an old high", lambda r: span(r, "longest")),
+        ("Second longest", lambda r: span(r, "second")),
+        ("Drawdowns deeper than $25k", lambda r: f"{r.n_drawdowns_over_25k}"),
+        ("... back at the high within 3 months", lambda r: f"{r.back_within_3m}"),
+        ("... back in 3 to 12 months", lambda r: f"{r.back_in_3_to_12m}"),
+        ("... back after more than 12 months", lambda r: f"{r.back_after_12m}"),
+        ("Share of days below the old high", lambda r: f"{100 * r.share_days_below_high:.0f}%"),
+        ("Share of days more than $50k below", lambda r: f"{100 * r.share_days_50k_below:.0f}%"),
+        ("Share of days more than $100k below", lambda r: f"{100 * r.share_days_100k_below:.0f}%"),
+        ("Whole calendar years below the old high", lambda r: r.whole_years_below_high.replace(" ", ", ") or "none"),
+        (f"Now ({t1:%d %b %Y})", lambda r: (f"{_usd(r.now_below_high)} below the {r.now_since:%d %b %Y} high "
+                                            f"({_dur(r.now_days)})") if r.now_days else "at its high"),
+    ]
+    t = pd.DataFrame({"": [n for n, _ in rows],
+                      **{u.loc[c, "series"]: [f(u.loc[c]) for _, f in rows] for c in cols}})
+    w(_md_table(t) + "\n")
+
+    def episodes_table(key):
+        ep = cb["episodes"][key]
+        ep = ep[(ep.depth >= 50_000) | (ep.days_below_high >= 182) | ep.ongoing].copy()
+        out = pd.DataFrame({
+            "Old high": ep.old_high_date.dt.strftime("%d %b %Y"),
+            "Low": ep.low_date.dt.strftime("%d %b %Y"),
+            "Drawdown": (-ep.depth).map(_usd),
+            "Back at the old high": [("not yet" if o else f"{d:%d %b %Y}") for d, o in zip(ep.back_at_high, ep.ongoing)],
+            "Time below the high": [_dur(d) + (" so far" if o else "") for d, o in zip(ep.days_below_high, ep.ongoing)],
+            "Falling": ep.days_falling.map(_dur),
+            "Climbing back": [("at the low now" if o and d == 0 else _dur(d) + (" so far" if o else ""))
+                              for d, o in zip(ep.days_recovering, ep.ongoing)],
+        })
+        return _md_table(out)
+    w("**Every stretch of 6+ months or $50k+ below the old high, pyramid + 2 put units:**\n")
+    w(episodes_table("1+2") + "\n")
+    w("<details><summary>The same list for the pyramid alone</summary>\n")
+    w(episodes_table("pyramid") + "\n")
+    w("</details>\n")
+    p, c2 = u.loc["pyramid"], u.loc["1+2"]
+    w(f"* **The combined P&L is below its old high most of the time** ({100 * c2.share_days_below_high:.0f}% of days, "
+      f"the same as the pyramid alone at {100 * p.share_days_below_high:.0f}%). It makes new highs in short bursts during "
+      "rallies, then gives part back. What matters is how deep and for how long.")
+    w(f"* **The puts shorten the long dry spells.** Longest stretch: {_dur(c2.longest_days)} instead of "
+      f"{_dur(p.longest_days)}; second longest {_dur(c2.second_days)} instead of {_dur(p.second_days)}. Whole calendar "
+      f"years without getting back to the high: {c2.whole_years_below_high.replace(' ', ', ') or 'none'} instead of "
+      f"{p.whole_years_below_high.replace(' ', ', ')}. The puts keep earning in sideways years, when the pyramid is "
+      "stopped out or flat.")
+    e2 = cb["episodes"]["1+2"]
+    quick = e2[(e2.depth >= 100_000) & (e2.days_below_high <= 91)].sort_values("depth", ascending=False)
+    yrs = cb["period"][2]
+    w(f"* **Plan for 1 to {c2.longest_days / 365.25:.1f} years under water, {c2.back_after_12m} times in {yrs:.0f} "
+      f"years.** That many of the {c2.n_drawdowns_over_25k} drawdowns deeper than $25k took more than a year to win "
+      f"back. {c2.back_within_3m} were back within 3 months, including sharp drops of $100k+ ("
+      + ", ".join(f"{r.old_high_date:%b %Y} {_usd(-r.depth)}" for r in quick.head(3).itertuples()) + ").")
+    w(f"* **More dips, slightly deeper, but shorter dry spells:** worst {_usd(-c2.worst_drawdown)} vs "
+      f"{_usd(-p.worst_drawdown)}, and {c2.n_drawdowns_over_25k} dips deeper than $25k vs {p.n_drawdowns_over_25k}. Part "
+      "of the higher count is long stretches splitting in two: the puts' income lifts the total back to its high in "
+      "between (April 2011 splits the pyramid's 2010-13 stretch).")
+    if c2.now_days:
+        w(f"* **Now:** {_usd(c2.now_below_high)} below the {c2.now_since:%d %b %Y} high, {_dur(c2.now_days)} into the "
+          "stretch.\n")
+    w("Files: [`results/combo_pyramid_drawdowns.csv`](../results/combo_pyramid_drawdowns.csv) (every stretch below the "
+      "high, for all four lines), [`results/combo_pyramid_underwater.csv`](../results/combo_pyramid_underwater.csv) "
+      "(the summary above).\n")
     return L
 
 
@@ -980,7 +1140,10 @@ def _markdown(df, ctx, runs, grid, grid01, pt, sy, sens, lad, cal, pao, snap, ca
           f"{100 * sel.loc[2].capital_saved_by_one_account:.0f}% less capital than two. Profit per dollar of peak "
           f"capital does not improve ({100 * sel.loc[0].return_on_peak_capital:.0f}% alone, "
           f"{100 * sel.loc[1].return_on_peak_capital:.0f}% and {100 * sel.loc[2].return_on_peak_capital:.0f}% combined), "
-          "and in choppy corrections (2010, 2015-16, 2025) both lose together.\n")
+          "and in choppy corrections (2010, 2015-16, 2025) both lose together. "
+          + (lambda u: f"The longest stretch below an old P&L high shrinks from "
+             f"{u.loc['pyramid', 'longest_days'] / 365.25:.1f} to {u.loc['1+2', 'longest_days'] / 365.25:.1f} years "
+             f"(pyramid + 2 put units).")(cb["underwater"].set_index("key")) + "\n")
     w("## 1. What was tested\n")
     w("* **Trade.** At the close of each quarterly NQ expiry (3rd Friday of Mar/Jun/Sep/Dec), sell the put that expires "
       "at the next quarterly expiry (~13 weeks) with the **strike at the futures price (ATM-forward)**. Hold it to expiry. "

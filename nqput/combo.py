@@ -201,11 +201,89 @@ def by_year(F: pd.DataFrame, put_margin: float = PUT_MARGIN, pyr_margin: float =
     pnl.iloc[0] = end[["pyr7", "puts_rec", "puts_fix"]].iloc[0]
     t = pnl.rename(columns={"pyr7": "pyramid_pnl", "puts_rec": "puts_rec_pnl", "puts_fix": "puts_fix_pnl"})
     t["one_to_one_rec_pnl"] = t.pyramid_pnl + t.puts_rec_pnl
+    t["one_to_two_rec_pnl"] = t.pyramid_pnl + 2 * t.puts_rec_pnl
     t["ndx_move"] = F.ndx.groupby(y).last() / F.ndx.groupby(y).first() - 1
     t["pyramid_peak_margin"] = (F.notional_pyr * pyr_margin).groupby(y).max()
     t["puts_rec_peak_margin"] = (F.notional_rec * put_margin).groupby(y).max()
     t.index.name = "year"
     return t
+
+
+# ----------------------------------------------------------------------------- time below the old high
+MIXES = {"pyramid": ("Pyramid + weekly calls alone", 0.0), "1+1": ("Pyramid + 1 put unit", 1.0),
+         "1+2": ("Pyramid + 2 put units", 2.0), "puts": ("Puts alone (1 unit, recovery rule)", None)}
+
+
+def mix_pnl(F: pd.DataFrame, key: str) -> pd.Series:
+    """Cumulative $ P&L of one pyramid unit + k recovery-rule put units (or the puts alone)."""
+    k = MIXES[key][1]
+    return F.puts_rec.copy() if k is None else F.pyr7 + k * F.puts_rec
+
+
+def drawdown_episodes(pnl: pd.Series, eps: float = 1.0) -> pd.DataFrame:
+    """Every stretch below the previous P&L high: the old high, the low, and the day P&L is back at the high.
+
+    A day counts as below the high when P&L is more than `eps` dollars under the highest P&L so far
+    (the start, $0, counts as a high). The last stretch can still be open (back_at_high = NaT).
+    """
+    v, idx = pnl.to_numpy(dtype=float), pnl.index
+    hwm = np.maximum.accumulate(np.maximum(v, 0.0))
+    under = v < hwm - eps
+    rows, i, n = [], 0, len(v)
+    while i < n:
+        if not under[i]:
+            i += 1
+            continue
+        s = i
+        while i < n and under[i]:
+            i += 1
+        e = i - 1
+        t = s + int(np.argmin(v[s:e + 1]))
+        rows.append({"old_high_date": idx[s - 1] if s > 0 else idx[0], "old_high": hwm[s], "low_date": idx[t],
+                     "depth": hwm[s] - v[t], "back_at_high": idx[e + 1] if e + 1 < n else pd.NaT})
+    d = pd.DataFrame(rows)
+    end = d.back_at_high.fillna(idx[-1])
+    d["ongoing"] = d.back_at_high.isna()
+    d["days_below_high"] = (end - d.old_high_date).dt.days
+    d["days_falling"] = (d.low_date - d.old_high_date).dt.days
+    d["days_recovering"] = (end - d.low_date).dt.days
+    return d
+
+
+def underwater_summary(F: pd.DataFrame, big: float = 25_000.0) -> pd.DataFrame:
+    """How long each version spent below its old P&L high, and how deep."""
+    rows = []
+    for key, (label, _) in MIXES.items():
+        pnl = mix_pnl(F, key)
+        ep = drawdown_episodes(pnl)
+        hwm = pnl.cummax().clip(lower=0.0)
+        dd = hwm - pnl
+        under = dd > 1.0
+        b = ep[ep.depth >= big]
+        by_len = ep.sort_values("days_below_high", ascending=False)
+        lo, lo2 = by_len.iloc[0], by_len.iloc[1]
+        yrs = pnl.index.year
+        full = [y for y in sorted(set(yrs)) if (pnl.index[yrs == y].month.min() == 1 and pnl.index[yrs == y].month.max() == 12)]
+        whole_years = [y for y in full if under[yrs == y].all()]
+        last = ep.iloc[-1]
+        rows.append({
+            "series": label, "key": key, "total_pnl": pnl.iloc[-1], "profit_per_year": pnl.iloc[-1] / _years(pnl),
+            "worst_drawdown": dd.max(), "worst_drawdown_date": dd.idxmax().date(), "calmar": pnl.iloc[-1] / _years(pnl) / dd.max(),
+            "longest_days": int(lo.days_below_high), "longest_from": lo.old_high_date.date(),
+            "longest_to": None if lo.ongoing else lo.back_at_high.date(), "longest_depth": lo.depth,
+            "second_days": int(lo2.days_below_high), "second_from": lo2.old_high_date.date(),
+            "second_to": None if lo2.ongoing else lo2.back_at_high.date(), "second_depth": lo2.depth,
+            "n_drawdowns_over_25k": len(b),
+            "back_within_3m": int((b.days_below_high <= 91).sum()),
+            "back_in_3_to_12m": int(((b.days_below_high > 91) & (b.days_below_high <= 365)).sum()),
+            "back_after_12m": int((b.days_below_high > 365).sum()),
+            "median_days_over_25k": float(b.days_below_high.median()) if len(b) else np.nan,
+            "share_days_below_high": under.mean(), "share_days_50k_below": (dd > 50_000).mean(),
+            "share_days_100k_below": (dd > 100_000).mean(), "whole_years_below_high": " ".join(map(str, whole_years)),
+            "now_below_high": float(dd.iloc[-1]), "now_since": last.old_high_date.date() if last.ongoing else None,
+            "now_days": int(last.days_below_high) if last.ongoing else 0,
+        })
+    return pd.DataFrame(rows)
 
 
 def run(eq: pd.DataFrame, trades: pd.DataFrame, put_runs: dict, ndx: pd.Series) -> dict:
@@ -217,4 +295,5 @@ def run(eq: pd.DataFrame, trades: pd.DataFrame, put_runs: dict, ndx: pd.Series) 
     return {"frame": F, "mix": mix, "mix_margin6": mix_table(F, ks=(1, 2), put_margin=0.06),
             "standalone": standalone(F), "states": by_market_state(F), "overlap": overlap_table(F),
             "by_year": by_year(F), "monthly_corr": corr_m, "margin_corr": margin_corr,
+            "episodes": {k: drawdown_episodes(mix_pnl(F, k)) for k in MIXES}, "underwater": underwater_summary(F),
             "period": (F.index[0].date(), F.index[-1].date(), _years(F.pyr7))}

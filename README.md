@@ -74,6 +74,8 @@ The pyramid strategy from the `NQPyramidingUP` repo (70% recovery entries, +20% 
 
 Fixed-size puts barely move Calmar (0.44 to 0.46). Near its 52-week high the pyramid holds about $556k of NQ per unit, but only $88-150k once NDX is 5% or more below it. So one account needs 19-24% less capital than two, though profit per dollar of peak capital does not improve (36% alone, 35% / 32% combined). Both lost together in choppy corrections (2010, 2015-16, 2025), but not in the long bear markets (2008, 2022), when the pyramid sat flat. Report section 10, [`results/combo_pyramid_mix.csv`](results/combo_pyramid_mix.csv), and the daily series of both strategies in [`results/combo_pyramid_daily.csv`](results/combo_pyramid_daily.csv). The pyramid inputs are in `data/external/nqpyramidingup/`.
 
+Time below an old P&L high (report section 10.1, [`results/combo_pyramid_drawdowns.csv`](results/combo_pyramid_drawdowns.csv)): the combined P&L, like the pyramid's, sits below its last high on about 92% of days and makes new highs in bursts. Adding the puts shortens the long dry spells. With 2 put units, the longest stretch is 2.5 years (Apr 2011 to Oct 2013) instead of 3.6 years (Apr 2010 to Nov 2013), and the second longest is 1.7 years instead of 2.3. Whole calendar years without a new high drop from five (2011, 2012, 2016, 2019, 2022) to two (2012, 2019). Four drawdowns took more than a year to win back.
+
 ## Run it
 
 ```bash

@@ -13,7 +13,7 @@
 7. **Today (2026-11-02).** The 3-month put sold 2026-09-18 (strike ~29,888, premium ~1,206 pts = $24,112/NQ) is **in the money**. NQ is about 28,106, the put is worth ~2,190 pts, and the mark-to-market P&L is ~-1,014 pts (-$20,281 per NQ). It has 46 days left and delta ~0.72. Under your rule, a loss at the 18-Dec expiry would trigger a bigger position. The backtest says roll at normal size, because today's rich premium already does part of the recovery.
 
 8. **From 2008, winning back every loss in one quarter (section 9).** On $100k of base notional, not reinvested: a normal quarter that expires OTM pays about $4,216; total P&L $242,680 (fixed size: $151,765). The worst cumulated loss was -$53,140 at an expiry and -$104,425 inside a quarter, holding up to 7.9x size ($793,846 of notional).
-9. **Combined with the NQ pyramid strategy in one account (section 10).** Per $100k pyramid unit plus 1-2 put units (-5% hedge, recovery rule): Calmar 0.43 alone, 0.47-0.50 combined, with $85,366-$95,197 a year instead of $75,535. The pyramid holds little NQ when the market is down, so one account needs 19-24% less capital than two. Profit per dollar of peak capital does not improve (36% alone, 35% and 32% combined), and in choppy corrections (2010, 2015-16, 2025) both lose together.
+9. **Combined with the NQ pyramid strategy in one account (section 10).** Per $100k pyramid unit plus 1-2 put units (-5% hedge, recovery rule): Calmar 0.43 alone, 0.47-0.50 combined, with $85,366-$95,197 a year instead of $75,535. The pyramid holds little NQ when the market is down, so one account needs 19-24% less capital than two. Profit per dollar of peak capital does not improve (36% alone, 35% and 32% combined), and in choppy corrections (2010, 2015-16, 2025) both lose together. The longest stretch below an old P&L high shrinks from 3.6 to 2.5 years (pyramid + 2 put units).
 
 ## 1. What was tested
 
@@ -611,31 +611,111 @@ Worst drawdowns of each strategy, and what the other one did over the same dates
 
 P&L by year, per $100k unit:
 
-| Year | NDX | Pyramid | Puts, recovery | Puts, fixed | Pyramid + 1 put unit (recovery) | Pyramid peak margin | Puts (recovery) peak margin |
-|---|---|---|---|---|---|---|---|
-| 2008 (from 20 Mar) | -31% | -$18,518 | -$7,660 | -$4,163 | -$26,178 | $22,829 | $26,795 |
-| 2009 | +54% | $290,072 | $32,682 | $18,184 | $322,754 | $118,165 | $30,853 |
-| 2010 | +19% | $49,668 | $7,153 | $540 | $56,821 | $94,356 | $30,433 |
-| 2011 | +1% | -$65,576 | $3,099 | $2,625 | -$62,477 | $28,670 | $24,522 |
-| 2012 | +17% | -$15,215 | $9,190 | $1,780 | -$6,025 | $41,281 | $24,522 |
-| 2013 | +35% | $155,996 | $15,933 | $11,929 | $171,929 | $116,804 | $21,847 |
-| 2014 | +18% | $119,552 | -$841 | -$2,544 | $118,711 | $122,731 | $21,735 |
-| 2015 | +8% | -$73,266 | $4,999 | $562 | -$68,267 | $67,320 | $34,839 |
-| 2016 | +6% | $77,170 | $11,522 | $4,367 | $88,692 | $107,124 | $66,656 |
-| 2017 | +32% | $58,164 | $9,971 | $9,971 | $68,135 | $80,035 | $10,000 |
-| 2018 | -1% | -$97,133 | $4,796 | -$1,540 | -$92,337 | $80,749 | $24,914 |
-| 2019 | +38% | $84,890 | $16,646 | $13,311 | $101,536 | $101,915 | $20,022 |
-| 2020 | +48% | $253,831 | $26,568 | $18,361 | $280,399 | $116,072 | $16,952 |
-| 2021 | +27% | $187,577 | $15,905 | $14,863 | $203,482 | $124,026 | $14,459 |
-| 2022 | -34% | $0 | -$882 | -$8,102 | -$882 | $0 | $33,550 |
-| 2023 | +54% | $149,896 | $13,873 | $7,453 | $163,769 | $111,597 | $20,632 |
-| 2024 | +25% | -$68,248 | $12,468 | $6,499 | -$55,780 | $82,163 | $19,169 |
-| 2025 | +20% | $173,584 | $7,752 | $557 | $181,336 | $127,485 | $33,043 |
-| 2026 YTD | +11% | $144,027 | -$121 | -$1,780 | $143,906 | $125,525 | $15,088 |
+| Year | NDX | Pyramid | Puts, recovery | Puts, fixed | Pyramid + 1 put unit (recovery) | Pyramid + 2 put units (recovery) | Pyramid peak margin | Puts (recovery) peak margin |
+|---|---|---|---|---|---|---|---|---|
+| 2008 (from 20 Mar) | -31% | -$18,518 | -$7,660 | -$4,163 | -$26,178 | -$33,839 | $22,829 | $26,795 |
+| 2009 | +54% | $290,072 | $32,682 | $18,184 | $322,754 | $355,437 | $118,165 | $30,853 |
+| 2010 | +19% | $49,668 | $7,153 | $540 | $56,821 | $63,974 | $94,356 | $30,433 |
+| 2011 | +1% | -$65,576 | $3,099 | $2,625 | -$62,477 | -$59,378 | $28,670 | $24,522 |
+| 2012 | +17% | -$15,215 | $9,190 | $1,780 | -$6,025 | $3,166 | $41,281 | $24,522 |
+| 2013 | +35% | $155,996 | $15,933 | $11,929 | $171,929 | $187,861 | $116,804 | $21,847 |
+| 2014 | +18% | $119,552 | -$841 | -$2,544 | $118,711 | $117,870 | $122,731 | $21,735 |
+| 2015 | +8% | -$73,266 | $4,999 | $562 | -$68,267 | -$63,267 | $67,320 | $34,839 |
+| 2016 | +6% | $77,170 | $11,522 | $4,367 | $88,692 | $100,215 | $107,124 | $66,656 |
+| 2017 | +32% | $58,164 | $9,971 | $9,971 | $68,135 | $78,107 | $80,035 | $10,000 |
+| 2018 | -1% | -$97,133 | $4,796 | -$1,540 | -$92,337 | -$87,541 | $80,749 | $24,914 |
+| 2019 | +38% | $84,890 | $16,646 | $13,311 | $101,536 | $118,182 | $101,915 | $20,022 |
+| 2020 | +48% | $253,831 | $26,568 | $18,361 | $280,399 | $306,968 | $116,072 | $16,952 |
+| 2021 | +27% | $187,577 | $15,905 | $14,863 | $203,482 | $219,388 | $124,026 | $14,459 |
+| 2022 | -34% | $0 | -$882 | -$8,102 | -$882 | -$1,764 | $0 | $33,550 |
+| 2023 | +54% | $149,896 | $13,873 | $7,453 | $163,769 | $177,642 | $111,597 | $20,632 |
+| 2024 | +25% | -$68,248 | $12,468 | $6,499 | -$55,780 | -$43,312 | $82,163 | $19,169 |
+| 2025 | +20% | $173,584 | $7,752 | $557 | $181,336 | $189,088 | $127,485 | $33,043 |
+| 2026 YTD | +11% | $144,027 | -$121 | -$1,780 | $143,906 | $143,786 | $125,525 | $15,088 |
 
 **Takeaway:** add 1-2 recovery-rule put units per pyramid unit. Calmar rises from 0.43 to 0.47-0.50, profit rises by $9,831-$19,662 a year, and the shared account needs 19%-24% less capital than two separate ones. Going to about 4.75 units maximises Calmar (0.56), but needs $540,400 of peak capital per pyramid unit.
 
 Files: [`results/combo_pyramid_mix.csv`](../results/combo_pyramid_mix.csv) (all mixes, 10% and 6% put margin), `combo_pyramid_market_state.csv`, `combo_pyramid_overlap.csv`, `combo_pyramid_by_year.csv`, and [`results/combo_pyramid_daily.csv`](../results/combo_pyramid_daily.csv) (daily P&L and notional of both strategies). Inputs: `data/external/nqpyramidingup/` (see its SOURCE.md). Code: `nqput/combo.py`.
+
+### 10.1 Combined P&L, and how long it stays below an old high
+
+One pyramid unit plus 1 or 2 put units (-5% hedge, recovery rule), in dollars, never reinvested, 20 Mar 2008 to 02 Nov 2026. "Below the old high" means the total P&L is under the highest total reached so far. The stretch ends on the day the P&L is back at that high.
+
+![Combined P&L and time below the old high](figures/9_combined_pnl_drawdowns.png)
+
+|  | Pyramid + weekly calls alone | Pyramid + 1 put unit | Pyramid + 2 put units | Puts alone (1 unit, recovery rule) |
+|---|---|---|---|---|
+| Total P&L | $1,406,471 | $1,589,527 | $1,772,582 | $183,056 |
+| Profit per year | $75,535 | $85,366 | $95,197 | $9,831 |
+| Worst drawdown | -$173,862 (May 2025) | -$181,396 (May 2025) | -$189,962 (Apr 2025) | -$24,193 (Jan 2016) |
+| Calmar | 0.43 | 0.47 | 0.50 | 0.41 |
+| Longest time below an old high | 3.6 years (Apr 2010 to Nov 2013, low -$118,977) | 3.5 years (Apr 2010 to Oct 2013, low -$129,593) | 2.5 years (Apr 2011 to Oct 2013, low -$84,054) | 11 months (Jul 2015 to Jun 2016, low -$24,193) |
+| Second longest | 2.3 years (Jul 2015 to Oct 2017, low -$125,632) | 1.8 years (Aug 2018 to Jun 2020, low -$161,779) | 1.7 years (Aug 2018 to May 2020, low -$155,556) | 10 months (Jun 2008 to Apr 2009, low -$22,410) |
+| Drawdowns deeper than $25k | 25 | 27 | 32 | 0 |
+| ... back at the high within 3 months | 15 | 17 | 19 | 0 |
+| ... back in 3 to 12 months | 6 | 6 | 9 | 0 |
+| ... back after more than 12 months | 4 | 4 | 4 | 0 |
+| Share of days below the old high | 92% | 93% | 92% | 72% |
+| Share of days more than $50k below | 37% | 35% | 35% | 0% |
+| Share of days more than $100k below | 18% | 19% | 20% | 0% |
+| Whole calendar years below the old high | 2011, 2012, 2016, 2019, 2022 | 2011, 2012, 2019 | 2012, 2019 | none |
+| Now (02 Nov 2026) | $36,199 below the 29 May 2026 high (5 months) | $41,680 below the 29 May 2026 high (5 months) | $47,162 below the 29 May 2026 high (5 months) | $6,596 below the 07 Oct 2026 high (26 days) |
+
+**Every stretch of 6+ months or $50k+ below the old high, pyramid + 2 put units:**
+
+| Old high | Low | Drawdown | Back at the old high | Time below the high | Falling | Climbing back |
+|---|---|---|---|---|---|---|
+| 16 May 2008 | 31 Mar 2009 | -$67,540 | 16 Apr 2009 | 11 months | 10 months | 16 days |
+| 05 May 2009 | 13 May 2009 | -$111,444 | 01 Jun 2009 | 27 days | 8 days | 19 days |
+| 22 Sep 2009 | 02 Oct 2009 | -$83,419 | 13 Oct 2009 | 21 days | 10 days | 11 days |
+| 23 Apr 2010 | 01 Jul 2010 | -$144,761 | 20 Apr 2011 | 12 months | 2 months | 10 months |
+| 29 Apr 2011 | 19 Dec 2011 | -$84,054 | 17 Oct 2013 | 2.5 years | 8 months | 1.8 years |
+| 18 Sep 2014 | 15 Oct 2014 | -$139,396 | 03 Nov 2014 | 2 months | 27 days | 19 days |
+| 20 Jul 2015 | 05 May 2016 | -$156,128 | 15 Dec 2016 | 1.4 years | 10 months | 7 months |
+| 27 Dec 2016 | 30 Dec 2016 | -$25,293 | 13 Oct 2017 | 10 months | 3 days | 9 months |
+| 18 Dec 2017 | 27 Jun 2018 | -$57,117 | 07 Aug 2018 | 8 months | 6 months | 41 days |
+| 31 Aug 2018 | 24 Dec 2018 | -$155,556 | 11 May 2020 | 1.7 years | 4 months | 1.4 years |
+| 10 Jun 2020 | 12 Jun 2020 | -$60,931 | 22 Jun 2020 | 12 days | 2 days | 10 days |
+| 23 Jun 2020 | 26 Jun 2020 | -$57,008 | 01 Jul 2020 | 8 days | 3 days | 5 days |
+| 02 Sep 2020 | 02 Nov 2020 | -$161,560 | 28 Dec 2020 | 4 months | 2 months | 2 months |
+| 06 Sep 2021 | 04 Oct 2021 | -$122,453 | 29 Oct 2021 | 2 months | 28 days | 25 days |
+| 27 Dec 2021 | 17 Jun 2022 | -$37,136 | 28 Jul 2022 | 7 months | 6 months | 41 days |
+| 19 Sep 2022 | 02 Feb 2023 | -$15,080 | 31 Mar 2023 | 6 months | 4 months | 2 months |
+| 14 Jun 2023 | 26 Jun 2023 | -$20,554 | 13 Dec 2023 | 6 months | 12 days | 6 months |
+| 10 Jul 2024 | 10 Apr 2025 | -$189,962 | 08 Oct 2025 | 1.2 years | 9 months | 6 months |
+| 29 May 2026 | 02 Nov 2026 | -$47,162 | not yet | 5 months so far | 5 months | at the low now |
+
+<details><summary>The same list for the pyramid alone</summary>
+
+| Old high | Low | Drawdown | Back at the old high | Time below the high | Falling | Climbing back |
+|---|---|---|---|---|---|---|
+| 16 May 2008 | 31 Mar 2009 | -$45,292 | 09 Apr 2009 | 11 months | 10 months | 9 days |
+| 05 May 2009 | 13 May 2009 | -$108,930 | 01 Jun 2009 | 27 days | 8 days | 19 days |
+| 22 Sep 2009 | 02 Oct 2009 | -$79,039 | 13 Oct 2009 | 21 days | 10 days | 11 days |
+| 23 Apr 2010 | 04 Oct 2010 | -$118,977 | 14 Nov 2013 | 3.6 years | 5 months | 3.1 years |
+| 18 Sep 2014 | 15 Oct 2014 | -$130,829 | 31 Oct 2014 | 43 days | 27 days | 16 days |
+| 12 Nov 2014 | 08 Jul 2015 | -$52,850 | 20 Jul 2015 | 8 months | 8 months | 12 days |
+| 20 Jul 2015 | 27 Jun 2016 | -$125,632 | 31 Oct 2017 | 2.3 years | 11 months | 1.3 years |
+| 18 Dec 2017 | 03 Jul 2018 | -$39,637 | 27 Aug 2018 | 8 months | 6 months | 2 months |
+| 31 Aug 2018 | 09 Oct 2019 | -$172,944 | 09 Jun 2020 | 1.8 years | 1.1 years | 8 months |
+| 10 Jun 2020 | 12 Jun 2020 | -$60,913 | 22 Jun 2020 | 12 days | 2 days | 10 days |
+| 23 Jun 2020 | 26 Jun 2020 | -$53,606 | 01 Jul 2020 | 8 days | 3 days | 5 days |
+| 02 Sep 2020 | 02 Nov 2020 | -$167,832 | 29 Dec 2020 | 4 months | 2 months | 2 months |
+| 06 Sep 2021 | 04 Oct 2021 | -$115,750 | 29 Oct 2021 | 2 months | 28 days | 25 days |
+| 07 Dec 2021 | 28 Mar 2023 | -$10,064 | 31 Mar 2023 | 1.3 years | 1.3 years | 3 days |
+| 14 Jun 2023 | 06 Dec 2023 | -$21,431 | 13 Dec 2023 | 6 months | 6 months | 7 days |
+| 10 Jul 2024 | 23 May 2025 | -$173,862 | 08 Oct 2025 | 1.2 years | 10 months | 5 months |
+| 29 May 2026 | 14 Oct 2026 | -$36,199 | not yet | 5 months so far | 5 months | 19 days so far |
+
+</details>
+
+* **The combined P&L is below its old high most of the time** (92% of days, the same as the pyramid alone at 92%). It makes new highs in short bursts during rallies, then gives part back. What matters is how deep and for how long.
+* **The puts shorten the long dry spells.** Longest stretch: 2.5 years instead of 3.6 years; second longest 1.7 years instead of 2.3 years. Whole calendar years without getting back to the high: 2012, 2019 instead of 2011, 2012, 2016, 2019, 2022. The puts keep earning in sideways years, when the pyramid is stopped out or flat.
+* **Plan for 1 to 2.5 years under water, 4 times in 19 years.** That many of the 32 drawdowns deeper than $25k took more than a year to win back. 19 were back within 3 months, including sharp drops of $100k+ (Sep 2014 -$139,396, Sep 2021 -$122,453, May 2009 -$111,444).
+* **More dips, slightly deeper, but shorter dry spells:** worst -$189,962 vs -$173,862, and 32 dips deeper than $25k vs 25. Part of the higher count is long stretches splitting in two: the puts' income lifts the total back to its high in between (April 2011 splits the pyramid's 2010-13 stretch).
+* **Now:** $47,162 below the 29 May 2026 high, 5 months into the stretch.
+
+Files: [`results/combo_pyramid_drawdowns.csv`](../results/combo_pyramid_drawdowns.csv) (every stretch below the high, for all four lines), [`results/combo_pyramid_underwater.csv`](../results/combo_pyramid_underwater.csv) (the summary above).
 
 ## 11. Limitations
 
